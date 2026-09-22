@@ -1127,7 +1127,12 @@ class LocationRequest extends FormRequest
             TaskType::PickImage->value => $rules + [
                 'images' => ['required', 'array', 'min:3', 'max:6'],
                 'images.*' => ['image', 'max:5120'],
-                'correct_index' => ['required', 'integer', 'min:0'],
+                'correct_index' => ['required', 'integer', 'min:0', function ($attribute, $value, $fail) {
+                    $count = count($this->file('images', []));
+                    if ($value >= $count) {
+                        $fail('correct_index must reference one of the uploaded images.');
+                    }
+                }],
             ],
             TaskType::PhotoOfSomething->value, TaskType::SelfieDoingSomething->value => $rules + [
                 'reference_image' => ['required', 'image', 'max:5120'],
@@ -1242,10 +1247,20 @@ Do stejné skupiny v `routes/web.php` z Task 4 (uvnitř
 use App\Http\Controllers\Admin\LocationController;
 
 Route::post('games/{game}/locations', [LocationController::class, 'store'])->name('games.locations.store');
-Route::put('games/{game}/locations/{location}', [LocationController::class, 'update'])->name('games.locations.update');
-Route::delete('games/{game}/locations/{location}', [LocationController::class, 'destroy'])->name('games.locations.destroy');
 Route::patch('games/{game}/locations/reorder', [LocationController::class, 'reorder'])->name('games.locations.reorder');
+
+Route::scopeBindings()->group(function () {
+    Route::put('games/{game}/locations/{location}', [LocationController::class, 'update'])->name('games.locations.update');
+    Route::delete('games/{game}/locations/{location}', [LocationController::class, 'destroy'])->name('games.locations.destroy');
+});
 ```
+
+`update`/`destroy` musí být v `Route::scopeBindings()` — jinak
+`$this->authorize('update', $game)` ověří jen vlastnictví hry, ne že
+`{location}` do ní skutečně patří (cross-tenant IDOR: dozor by mohl
+mazat/přepisovat cizí stanoviště přes cizí ID v URL vlastní hry).
+`scopeBindings()` využije existující `Game::locations()` relaci a
+vrátí 404, pokud stanoviště nepatří k dané hře.
 
 - [ ] **Step 6: Spusť testy a ověř průchod**
 
