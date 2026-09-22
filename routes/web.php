@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\GameController;
+use App\Http\Controllers\Admin\LocationController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -34,6 +35,11 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::delete('games/{game}', [GameController::class, 'destroy'])->name('games.destroy');
     Route::patch('games/{game}/publish', [GameController::class, 'publish'])->name('games.publish');
     Route::patch('games/{game}/unpublish', [GameController::class, 'unpublish'])->name('games.unpublish');
+
+    Route::post('games/{game}/locations', [LocationController::class, 'store'])->name('games.locations.store');
+    Route::put('games/{game}/locations/{location}', [LocationController::class, 'update'])->name('games.locations.update');
+    Route::delete('games/{game}/locations/{location}', [LocationController::class, 'destroy'])->name('games.locations.destroy');
+    Route::patch('games/{game}/locations/reorder', [LocationController::class, 'reorder'])->name('games.locations.reorder');
 });
 
 require __DIR__.'/auth.php';
