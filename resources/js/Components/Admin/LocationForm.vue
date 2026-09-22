@@ -46,10 +46,12 @@ const submit = () => {
     <form @submit.prevent="submit" class="space-y-4 rounded border p-4">
         <MapPicker v-model="position" />
         <p v-if="form.errors.lat" class="text-sm text-red-600">{{ form.errors.lat }}</p>
+        <p v-if="form.errors.lng" class="text-sm text-red-600">{{ form.errors.lng }}</p>
 
         <div>
             <label class="block text-sm font-medium text-gray-700">Poloměr "dorazil jsem" (m)</label>
             <input v-model.number="form.arrival_radius_m" type="number" min="5" max="200" class="mt-1 block w-32 rounded border-gray-300" />
+            <p v-if="form.errors.arrival_radius_m" class="text-sm text-red-600">{{ form.errors.arrival_radius_m }}</p>
         </div>
 
         <div>
@@ -60,6 +62,7 @@ const submit = () => {
                 <option value="photo_of_something">Vyfotit něco</option>
                 <option value="selfie_doing_something">Vyfotit se při činnosti</option>
             </select>
+            <p v-if="form.errors.task_type" class="text-sm text-red-600">{{ form.errors.task_type }}</p>
         </div>
 
         <TaskContentFields :task-type="form.task_type" :form="form" />
