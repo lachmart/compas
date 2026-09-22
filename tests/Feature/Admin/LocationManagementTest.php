@@ -136,6 +136,17 @@ test('a dozor can reorder locations', function () {
         ->and($first->fresh()->order)->toBe(2);
 });
 
+test('reordering rejects a partial order array missing one of the game locations', function () {
+    $user = User::factory()->create();
+    $game = Game::factory()->create(['owner_id' => $user->id]);
+    $first = Location::factory()->create(['game_id' => $game->id, 'order' => 1]);
+    Location::factory()->create(['game_id' => $game->id, 'order' => 2]);
+
+    $this->actingAs($user)->patch(route('admin.games.locations.reorder', $game), [
+        'order' => [$first->id],
+    ])->assertStatus(422);
+});
+
 test("a dozor cannot modify locations of another dozor's game", function () {
     $owner = User::factory()->create();
     $stranger = User::factory()->create();
@@ -147,6 +158,75 @@ test("a dozor cannot modify locations of another dozor's game", function () {
         'arrival_radius_m' => 15,
         'task_type' => 'arrival_only',
     ])->assertForbidden();
+});
+
+test('a dozor can update an arrival_only location', function () {
+    $user = User::factory()->create();
+    $game = Game::factory()->create(['owner_id' => $user->id]);
+    $location = Location::factory()->create([
+        'game_id' => $game->id,
+        'task_type' => TaskType::ArrivalOnly,
+        'arrival_radius_m' => 15,
+    ]);
+
+    $this->actingAs($user)->put(route('admin.games.locations.update', [$game, $location]), [
+        'lat' => 50.08,
+        'lng' => 14.43,
+        'arrival_radius_m' => 42,
+        'task_type' => 'arrival_only',
+    ])->assertRedirect();
+
+    expect($location->fresh()->arrival_radius_m)->toBe(42)
+        ->and($location->fresh()->task_payload)->toBeNull();
+});
+
+test('a dozor can update a pick_image location by re-uploading images', function () {
+    $user = User::factory()->create();
+    $game = Game::factory()->create(['owner_id' => $user->id]);
+    $location = Location::factory()->create([
+        'game_id' => $game->id,
+        'task_type' => TaskType::PickImage,
+        'task_payload' => ['images' => ['old-a.jpg', 'old-b.jpg', 'old-c.jpg'], 'correct_index' => 0],
+    ]);
+
+    $this->actingAs($user)->put(route('admin.games.locations.update', [$game, $location]), [
+        'lat' => 50.08,
+        'lng' => 14.43,
+        'arrival_radius_m' => 15,
+        'task_type' => 'pick_image',
+        'images' => [
+            UploadedFile::fake()->image('new-a.jpg'),
+            UploadedFile::fake()->image('new-b.jpg'),
+            UploadedFile::fake()->image('new-c.jpg'),
+        ],
+        'correct_index' => 2,
+    ])->assertRedirect();
+
+    $location->refresh();
+    expect($location->task_payload['correct_index'])->toBe(2)
+        ->and($location->task_payload['images'])->toHaveCount(3);
+    Storage::disk('public')->assertExists($location->task_payload['images'][0]);
+});
+
+test('a dozor can update a photo_of_something location by re-uploading the reference image', function () {
+    $user = User::factory()->create();
+    $game = Game::factory()->create(['owner_id' => $user->id]);
+    $location = Location::factory()->create([
+        'game_id' => $game->id,
+        'task_type' => TaskType::PhotoOfSomething,
+        'task_payload' => ['reference_image' => 'old-ref.jpg'],
+    ]);
+
+    $this->actingAs($user)->put(route('admin.games.locations.update', [$game, $location]), [
+        'lat' => 50.08,
+        'lng' => 14.43,
+        'arrival_radius_m' => 15,
+        'task_type' => 'photo_of_something',
+        'reference_image' => UploadedFile::fake()->image('new-ref.jpg'),
+    ])->assertRedirect();
+
+    $location->refresh();
+    Storage::disk('public')->assertExists($location->task_payload['reference_image']);
 });
 
 test('a dozor cannot update or delete a location belonging to another game, even one they own', function () {

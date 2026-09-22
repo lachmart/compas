@@ -8,6 +8,8 @@ use App\Http\Requests\Admin\LocationRequest;
 use App\Models\Game;
 use App\Models\Location;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class LocationController extends Controller
 {
@@ -57,14 +59,22 @@ class LocationController extends Controller
 
         $request->validate([
             'order' => ['required', 'array'],
-            'order.*' => ['integer', 'exists:locations,id'],
+            'order.*' => ['integer', Rule::exists('locations', 'id')->where('game_id', $game->id)],
         ]);
 
-        foreach ($request->input('order') as $index => $locationId) {
-            Location::where('id', $locationId)
-                ->where('game_id', $game->id)
-                ->update(['order' => $index + 1]);
+        $order = $request->input('order');
+
+        if (count($order) !== $game->locations()->count()) {
+            abort(422, 'Order must include every location in this game.');
         }
+
+        DB::transaction(function () use ($order, $game) {
+            foreach ($order as $index => $locationId) {
+                Location::where('id', $locationId)
+                    ->where('game_id', $game->id)
+                    ->update(['order' => $index + 1]);
+            }
+        });
 
         return back();
     }

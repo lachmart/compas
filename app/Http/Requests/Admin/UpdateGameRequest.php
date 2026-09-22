@@ -18,6 +18,7 @@ class UpdateGameRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'slug' => [
                 'required', 'string', 'max:255',
+                'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
                 Rule::unique('games', 'slug')->ignore($this->route('game')),
             ],
         ];

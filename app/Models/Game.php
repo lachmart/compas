@@ -25,6 +25,6 @@ class Game extends Model
 
     public function locations(): HasMany
     {
-        return $this->hasMany(Location::class)->orderBy('order');
+        return $this->hasMany(Location::class)->orderBy('order')->orderBy('id');
     }
 }

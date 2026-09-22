@@ -1,10 +1,14 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 
 defineProps({
     games: Array,
 });
+
+const remove = (game) => {
+    router.delete(route('admin.games.destroy', game.id));
+};
 </script>
 
 <template>
@@ -30,6 +34,7 @@ defineProps({
                                 </Link>
                                 <span class="ml-2 text-sm text-gray-500">({{ game.status }})</span>
                             </div>
+                            <button type="button" class="text-red-600" @click="remove(game)">Smazat</button>
                         </li>
                         <li v-if="games.length === 0" class="p-4 text-gray-500">Zatím žádné hry.</li>
                     </ul>

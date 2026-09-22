@@ -24,17 +24,6 @@ test('a dozor can create a game and gets a unique slug', function () {
 });
 
 test('a dozor only sees their own games', function () {
-    // This is the only test in the suite that renders a full Inertia page
-    // via a real GET request. The Admin/Games/Index Vue component doesn't
-    // exist yet (it lands in a later, frontend-focused task), so the
-    // built Vite manifest has no entry for it and inertia-laravel's
-    // testing helper would otherwise fail the on-disk component check.
-    // Scoped to this test only so the rest of the suite keeps the real
-    // Vite-manifest/component-existence checks that catch typos in
-    // Inertia::render component names.
-    $this->withoutVite();
-    config(['inertia.testing.ensure_pages_exist' => false]);
-
     $owner = User::factory()->create();
     $stranger = User::factory()->create();
     Game::factory()->create(['owner_id' => $owner->id]);
@@ -66,6 +55,28 @@ test('a dozor can update the game name and slug', function () {
 
     expect($game->fresh()->name)->toBe('Nový název')
         ->and($game->fresh()->slug)->toBe('novy-nazev');
+});
+
+test('updating a game rejects a slug with an invalid format', function () {
+    $user = User::factory()->create();
+    $game = Game::factory()->create(['owner_id' => $user->id]);
+
+    $this->actingAs($user)->put(route('admin.games.update', $game), [
+        'name' => 'Nový název',
+        'slug' => 'Invalid Slug/here',
+    ])->assertSessionHasErrors('slug');
+});
+
+test('updating a game accepts a valid lowercase-hyphenated slug', function () {
+    $user = User::factory()->create();
+    $game = Game::factory()->create(['owner_id' => $user->id]);
+
+    $this->actingAs($user)->put(route('admin.games.update', $game), [
+        'name' => 'Nový název',
+        'slug' => 'novy-nazev-2',
+    ])->assertSessionHasNoErrors()->assertRedirect();
+
+    expect($game->fresh()->slug)->toBe('novy-nazev-2');
 });
 
 test('a dozor can publish and unpublish a game', function () {
