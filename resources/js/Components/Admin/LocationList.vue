@@ -30,6 +30,16 @@ const closeForm = () => {
     editingLocation.value = null;
     isAdding.value = false;
 };
+
+const editLocation = (location) => {
+    isAdding.value = false;
+    editingLocation.value = location;
+};
+
+const startAdding = () => {
+    editingLocation.value = null;
+    isAdding.value = true;
+};
 </script>
 
 <template>
@@ -46,14 +56,14 @@ const closeForm = () => {
             >
                 <span>#{{ location.order }} — {{ location.task_type }}</span>
                 <span class="space-x-2">
-                    <button type="button" class="text-indigo-600" @click="editingLocation = location">Upravit</button>
+                    <button type="button" class="text-indigo-600" @click="editLocation(location)">Upravit</button>
                     <button type="button" class="text-red-600" @click="remove(location)">Smazat</button>
                 </span>
             </li>
             <li v-if="locations.length === 0" class="p-3 text-gray-500">Zatím žádná stanoviště.</li>
         </ul>
 
-        <button v-if="!isAdding && !editingLocation" type="button" class="rounded bg-indigo-600 px-4 py-2 text-white" @click="isAdding = true">
+        <button v-if="!isAdding && !editingLocation" type="button" class="rounded bg-indigo-600 px-4 py-2 text-white" @click="startAdding">
             Přidat stanoviště
         </button>
 
