@@ -26,7 +26,12 @@ class LocationRequest extends FormRequest
             TaskType::PickImage->value => $rules + [
                 'images' => ['required', 'array', 'min:3', 'max:6'],
                 'images.*' => ['image', 'max:5120'],
-                'correct_index' => ['required', 'integer', 'min:0'],
+                'correct_index' => ['required', 'integer', 'min:0', function ($attribute, $value, $fail) {
+                    $count = count($this->file('images', []));
+                    if ($value >= $count) {
+                        $fail('correct_index must reference one of the uploaded images.');
+                    }
+                }],
             ],
             TaskType::PhotoOfSomething->value, TaskType::SelfieDoingSomething->value => $rules + [
                 'reference_image' => ['required', 'image', 'max:5120'],

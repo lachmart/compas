@@ -37,9 +37,12 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::patch('games/{game}/unpublish', [GameController::class, 'unpublish'])->name('games.unpublish');
 
     Route::post('games/{game}/locations', [LocationController::class, 'store'])->name('games.locations.store');
-    Route::put('games/{game}/locations/{location}', [LocationController::class, 'update'])->name('games.locations.update');
-    Route::delete('games/{game}/locations/{location}', [LocationController::class, 'destroy'])->name('games.locations.destroy');
     Route::patch('games/{game}/locations/reorder', [LocationController::class, 'reorder'])->name('games.locations.reorder');
+
+    Route::scopeBindings()->group(function () {
+        Route::put('games/{game}/locations/{location}', [LocationController::class, 'update'])->name('games.locations.update');
+        Route::delete('games/{game}/locations/{location}', [LocationController::class, 'destroy'])->name('games.locations.destroy');
+    });
 });
 
 require __DIR__.'/auth.php';

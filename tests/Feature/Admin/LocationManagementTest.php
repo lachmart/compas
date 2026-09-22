@@ -65,6 +65,47 @@ test('pick_image requires at least three images', function () {
     ])->assertSessionHasErrors('images');
 });
 
+test('pick_image rejects a correct_index outside the uploaded images', function () {
+    $user = User::factory()->create();
+    $game = Game::factory()->create(['owner_id' => $user->id]);
+
+    $this->actingAs($user)->post(route('admin.games.locations.store', $game), [
+        'lat' => 50.08,
+        'lng' => 14.43,
+        'arrival_radius_m' => 15,
+        'task_type' => 'pick_image',
+        'images' => [
+            UploadedFile::fake()->image('a.jpg'),
+            UploadedFile::fake()->image('b.jpg'),
+            UploadedFile::fake()->image('c.jpg'),
+        ],
+        'correct_index' => 3,
+    ])->assertSessionHasErrors('correct_index');
+
+    expect(Location::count())->toBe(0);
+});
+
+test('pick_image accepts a correct_index within range of the uploaded images', function () {
+    $user = User::factory()->create();
+    $game = Game::factory()->create(['owner_id' => $user->id]);
+
+    $this->actingAs($user)->post(route('admin.games.locations.store', $game), [
+        'lat' => 50.08,
+        'lng' => 14.43,
+        'arrival_radius_m' => 15,
+        'task_type' => 'pick_image',
+        'images' => [
+            UploadedFile::fake()->image('a.jpg'),
+            UploadedFile::fake()->image('b.jpg'),
+            UploadedFile::fake()->image('c.jpg'),
+        ],
+        'correct_index' => 2,
+    ])->assertSessionHasNoErrors()->assertRedirect();
+
+    $location = $game->locations()->first();
+    expect($location->task_payload['correct_index'])->toBe(2);
+});
+
 test('a dozor can add a photo_of_something location with a reference image', function () {
     $user = User::factory()->create();
     $game = Game::factory()->create(['owner_id' => $user->id]);
@@ -106,6 +147,26 @@ test("a dozor cannot modify locations of another dozor's game", function () {
         'arrival_radius_m' => 15,
         'task_type' => 'arrival_only',
     ])->assertForbidden();
+});
+
+test('a dozor cannot update or delete a location belonging to another game, even one they own', function () {
+    $ownerA = User::factory()->create();
+    $ownerB = User::factory()->create();
+    $gameA = Game::factory()->create(['owner_id' => $ownerA->id]);
+    $gameB = Game::factory()->create(['owner_id' => $ownerB->id]);
+    $locationB = Location::factory()->create(['game_id' => $gameB->id]);
+
+    $this->actingAs($ownerA)->put(route('admin.games.locations.update', [$gameA, $locationB]), [
+        'lat' => 50.08,
+        'lng' => 14.43,
+        'arrival_radius_m' => 15,
+        'task_type' => 'arrival_only',
+    ])->assertNotFound();
+
+    $this->actingAs($ownerA)->delete(route('admin.games.locations.destroy', [$gameA, $locationB]))
+        ->assertNotFound();
+
+    expect(Location::find($locationB->id))->not->toBeNull();
 });
 
 test('a dozor can delete a location', function () {
