@@ -37,9 +37,10 @@ může být slabý signál).
   `/hra/{slug}`), stav `draft` / `published` / `archived`.
 - **Location (Stanoviště)** — patří do `Game`, `order` (pořadí v lineární
   sekvenci), `lat`, `lng`, `arrival_radius_m` (výchozí 15 m, upravitelné),
-  `task_type` (`pick_image` / `photo_of_something` / `selfie_doing_something`),
-  `task_payload` (JSON dle typu — u `pick_image` sada obrázků + ID
-  správného, u fotoúkolů referenční obrázek/ikona zadání).
+  `task_type` (`arrival_only` / `pick_image` / `photo_of_something` /
+  `selfie_doing_something`), `task_payload` (JSON dle typu — u
+  `arrival_only` prázdné, u `pick_image` sada obrázků + ID správného, u
+  fotoúkolů referenční obrázek/ikona zadání).
 - **PlayerSession (Hráč)** — `game_id`, přezdívka, `device_token` (uložen
   v cookie/localStorage, drží identitu bez hesla i po refreshi),
   `current_location_index`, `started_at`, `finished_at`.
@@ -64,12 +65,15 @@ může být slabý signál).
    zvýrazněný, vlastní pozice a natočení, dosud ušlá trasa
    (z `PositionPing`).
 5. Po vstupu do `arrival_radius_m` (potvrzeno až po pár sekundách setrvání,
-   kvůli nepřesnosti GPS) se odemkne obrazovka úkolu:
-   - `pick_image` — tap na jeden z nabízených obrázků, auto-vyhodnocení,
-     lze zkusit znovu.
-   - `photo_of_something` / `selfie_doing_something` — nativní
-     fotoaparát (`<input type="file" capture>`), po vyfocení automatický
-     odeslání a auto-splnění.
+   kvůli nepřesnosti GPS) se stanoviště vyhodnotí podle `task_type`:
+   - `arrival_only` — žádný úkol, samotný příchod na místo stanoviště
+     rovnou splní (vhodné pro jednodušší/kratší trasy nebo mezistanice bez
+     úkolu).
+   - `pick_image` — odemkne se obrazovka úkolu, tap na jeden z nabízených
+     obrázků, auto-vyhodnocení, lze zkusit znovu.
+   - `photo_of_something` / `selfie_doing_something` — odemkne se
+     obrazovka úkolu s nativním fotoaparátem (`<input type="file"
+     capture>`), po vyfocení automatický odeslání a auto-splnění.
 6. Krátká vizuální odměna → appka přepne navigaci na další stanoviště.
 7. Po posledním stanovišti → obrazovka "hra dokončena".
 
@@ -82,9 +86,9 @@ může být slabý signál).
 - Umístění stanoviště dvěma způsoby: kliknutím na mapu, nebo tlačítkem
   "použij moji aktuální polohu" (dozor fyzicky stojí na místě).
 - Nastavitelný `arrival_radius_m` podle terénu.
-- Podle `task_type` nahrání obsahu: u `pick_image` 3–6 obrázků + označení
-  správného, u fotoúkolů jeden referenční obrázek ukazující zadání (bez
-  textu).
+- Podle `task_type` nahrání obsahu: `arrival_only` nevyžaduje žádný obsah
+  (jen umístění na mapě), u `pick_image` 3–6 obrázků + označení správného,
+  u fotoúkolů jeden referenční obrázek ukazující zadání (bez textu).
 - Volitelný testovací náhled hry před publikováním.
 - Publikace přepne `status` na `published` a zpřístupní URL hráčům.
 
