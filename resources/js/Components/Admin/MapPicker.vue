@@ -2,6 +2,16 @@
 import { onMounted, onBeforeUnmount, ref } from 'vue';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: markerIcon2x,
+    iconUrl: markerIcon,
+    shadowUrl: markerShadow,
+});
 
 const props = defineProps({
     modelValue: { type: Object, default: () => ({ lat: null, lng: null }) },
@@ -11,6 +21,7 @@ const emit = defineEmits(['update:modelValue']);
 const mapEl = ref(null);
 let map;
 let marker;
+let isMounted = true;
 
 const setPosition = (lat, lng) => {
     emit('update:modelValue', { lat, lng });
@@ -39,10 +50,15 @@ onMounted(() => {
     map.on('click', (e) => setPosition(e.latlng.lat, e.latlng.lng));
 });
 
-onBeforeUnmount(() => map?.remove());
+onBeforeUnmount(() => {
+    isMounted = false;
+    map?.remove();
+});
 
 const useMyLocation = () => {
     navigator.geolocation.getCurrentPosition((position) => {
+        if (!isMounted) return;
+
         const { latitude, longitude } = position.coords;
         map.setView([latitude, longitude], 18);
         setPosition(latitude, longitude);
