@@ -51,8 +51,10 @@ const togglePublish = () => {
                         <button
                             type="button"
                             @click="togglePublish"
-                            class="rounded px-4 py-2"
+                            class="rounded px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
                             :class="game.status === 'published' ? 'bg-gray-200' : 'bg-green-600 text-white'"
+                            :disabled="game.status !== 'published' && locations.length === 0"
+                            :title="game.status !== 'published' && locations.length === 0 ? 'Nejdřív přidej stanoviště' : ''"
                         >
                             {{ game.status === 'published' ? 'Skrýt hru' : 'Publikovat' }}
                         </button>

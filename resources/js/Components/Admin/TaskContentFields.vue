@@ -77,7 +77,7 @@ const onReferenceImageChange = (event) => {
         </div>
 
         <p class="text-sm" :class="total >= 3 && total <= 6 ? 'text-gray-500' : 'text-amber-700'">
-            {{ total }} obrázků (potřeba 3–6)
+            Obrázky: {{ total }} (potřeba 3–6)
         </p>
 
         <label v-if="total < 6" class="inline-block cursor-pointer rounded bg-gray-100 px-3 py-1 text-sm text-gray-800 hover:bg-gray-200">
