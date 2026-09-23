@@ -110,3 +110,23 @@ test('a dozor can delete their own game', function () {
 
     expect(Game::find($game->id))->toBeNull();
 });
+
+test('the edit page lists locations with image urls and the correct index', function () {
+    $user = User::factory()->create();
+    $game = Game::factory()->create(['owner_id' => $user->id]);
+    Location::factory()->create([
+        'game_id' => $game->id, 'order' => 1, 'name' => 'Studánka',
+        'task_type' => 'pick_image',
+        'task_payload' => ['images' => ['task-images/a.jpg', 'task-images/b.jpg', 'task-images/c.jpg'], 'correct_index' => 2],
+    ]);
+
+    $this->actingAs($user)->get(route('admin.games.edit', $game))
+        ->assertInertia(fn ($page) => $page
+            ->component('Admin/Games/Edit')
+            ->has('locations', 1)
+            ->where('locations.0.name', 'Studánka')
+            ->where('locations.0.correct_index', 2)
+            ->where('locations.0.images.0.path', 'task-images/a.jpg')
+            ->where('locations.0.images.0.url', fn ($url) => str_ends_with($url, '/storage/task-images/a.jpg'))
+            ->where('locations.0.reference_image', null));
+});

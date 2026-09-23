@@ -16,7 +16,7 @@ const form = useForm({
     arrival_radius_m: props.location?.arrival_radius_m ?? 15,
     task_type: props.location?.task_type ?? 'arrival_only',
     images: [],
-    correct_index: props.location?.task_payload?.correct_index ?? 0,
+    correct_index: props.location?.correct_index ?? 0,
     reference_image: null,
 });
 

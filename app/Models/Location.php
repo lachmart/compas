@@ -41,4 +41,10 @@ class Location extends Model
     {
         return $this->task_payload['reference_image'] ?? null;
     }
+
+    /** Every stored file this location's task payload references. */
+    public function mediaPaths(): array
+    {
+        return array_values(array_filter([...$this->images(), $this->referenceImage()]));
+    }
 }

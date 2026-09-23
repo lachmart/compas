@@ -5,6 +5,7 @@ import LocationList from '@/Components/Admin/LocationList.vue';
 
 const props = defineProps({
     game: Object,
+    locations: Array,
 });
 
 const form = useForm({
@@ -66,7 +67,7 @@ const togglePublish = () => {
 
                 <div class="bg-white p-6 shadow-sm sm:rounded-lg">
                     <h3 class="mb-4 text-lg font-medium text-gray-800">Stanoviště</h3>
-                    <LocationList :game="game" :locations="game.locations" />
+                    <LocationList :game="game" :locations="locations" />
                 </div>
             </div>
         </div>

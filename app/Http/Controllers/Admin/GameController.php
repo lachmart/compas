@@ -9,6 +9,7 @@ use App\Http\Requests\Admin\UpdateGameRequest;
 use App\Models\Game;
 use App\Support\SlugGenerator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class GameController extends Controller
@@ -40,8 +41,22 @@ class GameController extends Controller
     {
         $this->authorize('update', $game);
 
+        $media = fn (string $path) => ['path' => $path, 'url' => Storage::disk('public')->url($path)];
+
         return Inertia::render('Admin/Games/Edit', [
-            'game' => $game->load('locations'),
+            'game' => $game,
+            'locations' => $game->locations()->get()->map(fn ($location) => [
+                'id' => $location->id,
+                'order' => $location->order,
+                'name' => $location->name,
+                'lat' => (float) $location->lat,
+                'lng' => (float) $location->lng,
+                'arrival_radius_m' => $location->arrival_radius_m,
+                'task_type' => $location->task_type->value,
+                'correct_index' => $location->correctImageIndex(),
+                'images' => array_map($media, $location->images()),
+                'reference_image' => $location->referenceImage() ? $media($location->referenceImage()) : null,
+            ])->values(),
         ]);
     }
 

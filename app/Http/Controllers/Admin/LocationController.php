@@ -9,6 +9,7 @@ use App\Models\Game;
 use App\Models\Location;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class LocationController extends Controller
@@ -18,12 +19,12 @@ class LocationController extends Controller
         $this->authorize('update', $game);
 
         $game->locations()->create([
+            'name' => $request->validated('name'),
             'lat' => $request->validated('lat'),
             'lng' => $request->validated('lng'),
             'arrival_radius_m' => $request->validated('arrival_radius_m'),
             'task_type' => $request->validated('task_type'),
-            'task_payload' => $this->buildTaskPayload($request),
-            'name' => $request->validated('name'),
+            'task_payload' => $this->buildTaskPayload($request, null),
             'order' => $game->locations()->max('order') + 1,
         ]);
 
@@ -34,14 +35,18 @@ class LocationController extends Controller
     {
         $this->authorize('update', $game);
 
+        $previousFiles = $location->mediaPaths();
+
         $location->update([
+            'name' => $request->validated('name'),
             'lat' => $request->validated('lat'),
             'lng' => $request->validated('lng'),
             'arrival_radius_m' => $request->validated('arrival_radius_m'),
             'task_type' => $request->validated('task_type'),
-            'task_payload' => $this->buildTaskPayload($request),
-            'name' => $request->validated('name'),
+            'task_payload' => $this->buildTaskPayload($request, $location),
         ]);
+
+        Storage::disk('public')->delete(array_values(array_diff($previousFiles, $location->mediaPaths())));
 
         return back();
     }
@@ -50,7 +55,9 @@ class LocationController extends Controller
     {
         $this->authorize('update', $game);
 
+        $files = $location->mediaPaths();
         $location->delete();
+        Storage::disk('public')->delete($files);
 
         return back();
     }
@@ -81,19 +88,24 @@ class LocationController extends Controller
         return back();
     }
 
-    private function buildTaskPayload(LocationRequest $request): ?array
+    private function buildTaskPayload(LocationRequest $request, ?Location $location): ?array
     {
         return match (TaskType::from($request->validated('task_type'))) {
             TaskType::ArrivalOnly => null,
             TaskType::PickImage => [
-                'images' => collect($request->file('images'))
-                    ->map(fn ($file) => $file->store('task-images', 'public'))
-                    ->values()
-                    ->all(),
+                // Same order the form shows: kept images first, then new uploads.
+                'images' => [
+                    ...array_values($request->validated('existing_images', [])),
+                    ...collect($request->file('images', []))
+                        ->map(fn ($file) => $file->store('task-images', 'public'))
+                        ->all(),
+                ],
                 'correct_index' => (int) $request->validated('correct_index'),
             ],
             TaskType::PhotoOfSomething, TaskType::SelfieDoingSomething => [
-                'reference_image' => $request->file('reference_image')->store('task-images', 'public'),
+                'reference_image' => $request->hasFile('reference_image')
+                    ? $request->file('reference_image')->store('task-images', 'public')
+                    : $location?->referenceImage(),
             ],
         };
     }
