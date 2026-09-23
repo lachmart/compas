@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import CompassScreen from '@/Components/Play/CompassScreen.vue';
 import MapScreen from '@/Components/Play/MapScreen.vue';
+import PlayerHud from '@/Components/Play/PlayerHud.vue';
 import PickImageTask from '@/Components/Play/PickImageTask.vue';
 import PhotoTask from '@/Components/Play/PhotoTask.vue';
 import RewardOverlay from '@/Components/Play/RewardOverlay.vue';
@@ -98,7 +99,7 @@ const toggleView = () => {
         @completed="onTaskCompleted"
     />
 
-    <div v-else class="relative h-screen">
+    <div v-else class="relative h-dvh overflow-hidden">
         <CompassScreen
             v-if="viewMode === 'compass'"
             :location="currentLocation"
@@ -111,12 +112,49 @@ const toggleView = () => {
             :current-location-id="currentLocation.id"
         />
 
+        <PlayerHud
+            :avatar="player.avatar"
+            :total="locations.length"
+            :completed="currentIndex"
+            :current="currentIndex"
+        />
+
         <button
             type="button"
             @click="toggleView"
-            class="absolute bottom-6 right-6 z-[1000] rounded-full bg-white p-4 text-2xl shadow-lg"
+            :aria-label="viewMode === 'compass' ? 'Mapa' : 'Kompas'"
+            class="absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-5 z-[1000] flex h-16 w-16 items-center justify-center rounded-full bg-white text-teal-700 shadow-xl ring-4 ring-white/60 active:scale-95 motion-safe:transition-transform"
         >
-            {{ viewMode === 'compass' ? '🗺️' : '🧭' }}
+            <!-- Folded map -->
+            <svg
+                v-if="viewMode === 'compass'"
+                viewBox="0 0 24 24"
+                class="h-9 w-9"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linejoin="round"
+                aria-hidden="true"
+            >
+                <path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20Z" class="fill-teal-100" />
+                <path d="M9 4v13.5M15 6.5V20" />
+                <circle cx="17.5" cy="10" r="1.6" class="fill-orange-500 stroke-orange-500" />
+            </svg>
+            <!-- Compass -->
+            <svg
+                v-else
+                viewBox="0 0 24 24"
+                class="h-9 w-9"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linejoin="round"
+                aria-hidden="true"
+            >
+                <circle cx="12" cy="12" r="10" class="fill-teal-100" />
+                <path d="M15.5 8.5 13.4 13.4 10.6 10.6Z" class="fill-orange-500 stroke-orange-500" />
+                <path d="M15.5 8.5 13.4 13.4 8.5 15.5 10.6 10.6Z" />
+            </svg>
         </button>
     </div>
 </template>

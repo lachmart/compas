@@ -76,13 +76,13 @@ watch(position, (value) => {
 </script>
 
 <template>
-    <div class="relative h-screen w-full">
+    <div class="relative h-dvh w-full">
         <div ref="mapEl" class="h-full w-full"></div>
         <button
             v-if="geoError"
             type="button"
             @click="requestPermissions"
-            class="absolute left-4 top-4 z-[1000] flex h-12 w-12 items-center justify-center rounded-full bg-red-500 text-2xl text-white shadow-lg"
+            class="absolute left-4 top-24 z-[1000] flex h-12 w-12 items-center justify-center rounded-full bg-red-500 text-2xl text-white shadow-lg"
         >
             ⚠️
         </button>
