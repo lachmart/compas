@@ -8,6 +8,7 @@ import PickImageTask from '@/Components/Play/PickImageTask.vue';
 import PhotoTask from '@/Components/Play/PhotoTask.vue';
 import RewardOverlay from '@/Components/Play/RewardOverlay.vue';
 import FinishScreen from '@/Components/Play/FinishScreen.vue';
+import { usePositionPings } from '@/lib/usePositionPings';
 
 const props = defineProps({
     game: Object,
@@ -21,6 +22,12 @@ const currentIndex = ref(props.player.current_location_index);
 const finished = ref(props.player.finished_at !== null);
 const activeTask = ref(null); // { task_type, images, reference_image } once arrived
 const showingReward = ref(false);
+
+// Pings run on every screen (map, tasks, reward) once permissions are
+// granted, not just while the compass is mounted, and stop once the game
+// is finished.
+const pingsEnabled = computed(() => permissionsGranted.value && !finished.value);
+usePositionPings(props.game.slug, pingsEnabled);
 
 const currentLocation = computed(() => props.locations[currentIndex.value] ?? null);
 

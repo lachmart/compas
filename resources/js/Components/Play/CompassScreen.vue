@@ -43,29 +43,6 @@ const backgroundColor = computed(() => {
 });
 
 let arrivalTimer = null;
-let pingTimer = null;
-
-const HEARTBEAT_MS = 30000;
-let lastPing = null; // { lat, lng, at }
-
-const sendPingIfMoved = () => {
-    if (!position.value) return;
-
-    const moved = !lastPing
-        || distanceMeters(lastPing.lat, lastPing.lng, position.value.lat, position.value.lng) >= 5;
-    const heartbeatDue = !lastPing || Date.now() - lastPing.at >= HEARTBEAT_MS;
-
-    if (!moved && !heartbeatDue) return;
-
-    lastPing = { lat: position.value.lat, lng: position.value.lng, at: Date.now() };
-    window.axios
-        .post(route('play.pings.store', props.gameSlug), {
-            lat: position.value.lat,
-            lng: position.value.lng,
-            heading: heading.value,
-        })
-        .catch(() => {});
-};
 
 const confirmArrival = async () => {
     hasArrivalError.value = false;
@@ -82,8 +59,6 @@ const confirmArrival = async () => {
 };
 
 watch(distance, (value) => {
-    sendPingIfMoved();
-
     if (value !== null && value <= props.location.arrival_radius_m) {
         if (!arrivalTimer) {
             arrivalTimer = setTimeout(confirmArrival, 3000);
@@ -104,11 +79,8 @@ watch(
     },
 );
 
-pingTimer = setInterval(sendPingIfMoved, 5000);
-
 onUnmounted(() => {
     if (arrivalTimer) clearTimeout(arrivalTimer);
-    if (pingTimer) clearInterval(pingTimer);
 });
 </script>
 
