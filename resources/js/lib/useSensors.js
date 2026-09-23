@@ -1,5 +1,6 @@
 import { onUnmounted, ref } from 'vue';
 import { absoluteOrientation, relativeOrientation } from '@/lib/orientation';
+import { needsOrientationPermission, onOrientationGranted, requestOrientationPermission } from '@/lib/orientationPermission';
 
 export function useSensors() {
     const position = ref(null);
@@ -7,6 +8,10 @@ export function useSensors() {
     const geoError = ref(null);
     const orientationSupported = ref(true);
     const orientation = ref(null);
+    // True on iOS while the compass permission is still missing (e.g. a
+    // returning player who skipped the join screen): show a tap target
+    // that calls enableCompass().
+    const needsTap = ref(needsOrientationPermission());
     let hasAbsoluteSource = false;
 
     let watchId = null;
@@ -58,36 +63,57 @@ export function useSensors() {
         );
     };
 
-    const requestPermissions = async () => {
-        startGeolocation();
+    const listenForOrientation = () => {
+        // Chrome also exposes deviceorientationabsolute (true heading);
+        // Safari only ever fires plain deviceorientation. Registering the
+        // same handler twice is a no-op, so this is safe to repeat.
+        window.addEventListener('deviceorientationabsolute', handleOrientation);
+        window.addEventListener('deviceorientation', handleOrientation);
+        orientationSupported.value = true;
+        needsTap.value = false;
+    };
 
-        const OrientationEvent = window.DeviceOrientationEvent;
-
-        if (OrientationEvent && typeof OrientationEvent.requestPermission === 'function') {
-            try {
-                const result = await OrientationEvent.requestPermission();
-
-                if (result === 'granted') {
-                    // Chrome now also exposes requestPermission (unlike Safari,
-                    // which only ever fires plain deviceorientation), so we
-                    // register both here too to get absolute heading there.
-                    window.addEventListener('deviceorientationabsolute', handleOrientation);
-                    window.addEventListener('deviceorientation', handleOrientation);
-                } else {
-                    orientationSupported.value = false;
-                }
-            } catch {
-                orientationSupported.value = false;
-            }
-        } else if (OrientationEvent) {
-            window.addEventListener('deviceorientationabsolute', handleOrientation);
-            window.addEventListener('deviceorientation', handleOrientation);
+    const handleOrientationResult = (result) => {
+        if (result === 'granted') {
+            listenForOrientation();
         } else {
             orientationSupported.value = false;
+            needsTap.value = needsOrientationPermission();
         }
     };
 
+    // Another screen (or the join button) may grant the permission while
+    // this instance is waiting — start listening as soon as that happens.
+    const stopWatchingGrant = onOrientationGranted(listenForOrientation);
+
+    const requestPermissions = async () => {
+        startGeolocation();
+
+        if (!window.DeviceOrientationEvent) {
+            orientationSupported.value = false;
+
+            return;
+        }
+
+        if (!needsOrientationPermission()) {
+            // No prompt needed (Android) or already granted this session.
+            listenForOrientation();
+
+            return;
+        }
+
+        // Called synchronously, so a click handler invoking
+        // requestPermissions() still counts as a user gesture on iOS.
+        // Outside a gesture iOS rejects and needsTap asks for a tap.
+        handleOrientationResult(await requestOrientationPermission());
+    };
+
+    // For a tap target shown while needsTap is true: must be called
+    // directly from the click handler (iOS user-gesture requirement).
+    const enableCompass = () => requestOrientationPermission().then(handleOrientationResult);
+
     onUnmounted(() => {
+        stopWatchingGrant();
         if (watchId !== null) {
             navigator.geolocation.clearWatch(watchId);
         }
@@ -95,5 +121,5 @@ export function useSensors() {
         window.removeEventListener('deviceorientationabsolute', handleOrientation);
     });
 
-    return { position, heading, orientation, geoError, orientationSupported, requestPermissions };
+    return { position, heading, orientation, geoError, orientationSupported, requestPermissions, needsTap, enableCompass };
 }

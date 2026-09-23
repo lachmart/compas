@@ -1,7 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { Head } from '@inertiajs/vue3';
-import PermissionGate from '@/Components/Play/PermissionGate.vue';
 import CompassScreen from '@/Components/Play/CompassScreen.vue';
 import MapScreen from '@/Components/Play/MapScreen.vue';
 import PickImageTask from '@/Components/Play/PickImageTask.vue';
@@ -16,17 +15,16 @@ const props = defineProps({
     player: Object,
 });
 
-const permissionsGranted = ref(false);
 const viewMode = ref('compass');
 const currentIndex = ref(props.player.current_location_index);
 const finished = ref(props.player.finished_at !== null);
 const activeTask = ref(null); // { task_type, images, reference_image } once arrived
 const showingReward = ref(false);
 
-// Pings run on every screen (map, tasks, reward) once permissions are
-// granted, not just while the compass is mounted, and stop once the game
-// is finished.
-const pingsEnabled = computed(() => permissionsGranted.value && !finished.value);
+// Pings run on every screen (map, tasks, reward) from the start, not just
+// while the compass is mounted, and stop once the game is finished. The
+// permission prompts were already started from the join screen's tap.
+const pingsEnabled = computed(() => !finished.value);
 usePositionPings(props.game.slug, pingsEnabled);
 
 const currentLocation = computed(() => props.locations[currentIndex.value] ?? null);
@@ -73,9 +71,7 @@ const toggleView = () => {
 <template>
     <Head :title="game.name" />
 
-    <PermissionGate v-if="!permissionsGranted" @ready="permissionsGranted = true" />
-
-    <FinishScreen v-else-if="finished" />
+    <FinishScreen v-if="finished" />
 
     <!-- No current location to play (e.g. a published game with zero locations,
          or locations removed mid-session so the player's index now overshoots).
