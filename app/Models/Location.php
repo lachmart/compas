@@ -26,4 +26,19 @@ class Location extends Model
     {
         return $this->belongsTo(Game::class);
     }
+
+    public function images(): array
+    {
+        return $this->task_payload['images'] ?? [];
+    }
+
+    public function correctImageIndex(): ?int
+    {
+        return $this->task_payload['correct_index'] ?? null;
+    }
+
+    public function referenceImage(): ?string
+    {
+        return $this->task_payload['reference_image'] ?? null;
+    }
 }

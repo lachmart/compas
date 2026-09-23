@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\Admin\GameController;
 use App\Http\Controllers\Admin\LocationController;
+use App\Http\Controllers\Play\AttemptController;
+use App\Http\Controllers\Play\PlayController;
+use App\Http\Controllers\Play\PositionPingController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -43,6 +46,19 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         Route::put('games/{game}/locations/{location}', [LocationController::class, 'update'])->name('games.locations.update');
         Route::delete('games/{game}/locations/{location}', [LocationController::class, 'destroy'])->name('games.locations.destroy');
     });
+});
+
+Route::prefix('hra/{game:slug}')->middleware('published.game')->group(function () {
+    Route::get('/', [PlayController::class, 'show'])->name('play.show');
+    Route::post('/join', [PlayController::class, 'join'])->name('play.join');
+
+    Route::scopeBindings()->group(function () {
+        Route::post('/locations/{location}/arrive', [AttemptController::class, 'arrive'])->name('play.attempts.arrive');
+        Route::post('/locations/{location}/answer', [AttemptController::class, 'answer'])->name('play.attempts.answer');
+        Route::post('/locations/{location}/photo', [AttemptController::class, 'photo'])->name('play.attempts.photo');
+    });
+
+    Route::post('/pings', [PositionPingController::class, 'store'])->name('play.pings.store');
 });
 
 require __DIR__.'/auth.php';

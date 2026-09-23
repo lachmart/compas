@@ -17,6 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
+        $middleware->alias([
+            'published.game' => \App\Http\Middleware\EnsurePublishedGame::class,
+        ]);
+
         //
     })
     ->withExceptions(function (Exceptions $exceptions): void {

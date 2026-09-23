@@ -27,4 +27,9 @@ class Game extends Model
     {
         return $this->hasMany(Location::class)->orderBy('order')->orderBy('id');
     }
+
+    public function playerSessions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PlayerSession::class);
+    }
 }

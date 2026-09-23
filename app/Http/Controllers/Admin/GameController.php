@@ -67,6 +67,8 @@ class GameController extends Controller
     {
         $this->authorize('update', $game);
 
+        abort_unless($game->locations()->exists(), 422);
+
         $game->update(['status' => GameStatus::Published]);
 
         return back();

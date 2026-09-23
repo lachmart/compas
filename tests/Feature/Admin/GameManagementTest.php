@@ -2,6 +2,7 @@
 
 use App\Enums\GameStatus;
 use App\Models\Game;
+use App\Models\Location;
 use App\Models\User;
 
 test('guests cannot access the games dashboard', function () {
@@ -82,11 +83,21 @@ test('updating a game accepts a valid lowercase-hyphenated slug', function () {
 test('a dozor can publish and unpublish a game', function () {
     $user = User::factory()->create();
     $game = Game::factory()->create(['owner_id' => $user->id, 'status' => GameStatus::Draft]);
+    Location::factory()->create(['game_id' => $game->id, 'order' => 1]);
 
     $this->actingAs($user)->patch(route('admin.games.publish', $game));
     expect($game->fresh()->status)->toBe(GameStatus::Published);
 
     $this->actingAs($user)->patch(route('admin.games.unpublish', $game));
+    expect($game->fresh()->status)->toBe(GameStatus::Draft);
+});
+
+test('a game with no locations cannot be published', function () {
+    $user = User::factory()->create();
+    $game = Game::factory()->create(['owner_id' => $user->id, 'status' => GameStatus::Draft]);
+
+    $this->actingAs($user)->patch(route('admin.games.publish', $game))
+        ->assertStatus(422);
     expect($game->fresh()->status)->toBe(GameStatus::Draft);
 });
 
