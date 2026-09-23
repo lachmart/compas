@@ -35,7 +35,12 @@ export function useSensors() {
             (error) => {
                 geoError.value = error.code === error.PERMISSION_DENIED ? 'denied' : 'unavailable';
             },
-            { enableHighAccuracy: true, maximumAge: 1000 },
+            // maximumAge: Infinity hands a newly mounted screen the last known
+            // fix immediately. With a short maximumAge, a watch started while
+            // the device stands still (e.g. switching compass -> map) gets no
+            // position until the player moves, because the platform only
+            // reports changes. Live updates still follow as usual.
+            { enableHighAccuracy: true, maximumAge: Infinity },
         );
     };
 
