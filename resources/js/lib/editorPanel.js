@@ -1,0 +1,39 @@
+import { pluralize } from './format';
+
+export const DEFAULT_RADIUS_M = 15;
+
+// The game editor's side panel is one of three views. `draft` is the
+// position + radius shared (v-model) between the location form and the map.
+export const listState = () => ({ panel: 'list', selectedId: null, draft: null });
+
+export const editState = (location) => ({
+    panel: 'edit',
+    selectedId: location.id,
+    draft: { lat: location.lat, lng: location.lng, arrival_radius_m: location.arrival_radius_m },
+});
+
+export const addState = () => ({
+    panel: 'add',
+    selectedId: null,
+    draft: { lat: null, lng: null, arrival_radius_m: DEFAULT_RADIUS_M },
+});
+
+export const mapModeFor = (panel) => (panel === 'list' ? 'view' : panel === 'add' ? 'place' : 'edit');
+
+// After the locations prop changes (save, delete, reorder) keep the current
+// view, unless the location being edited no longer exists.
+export function reconcileWithLocations(state, locations) {
+    if (state.panel === 'edit' && !locations.some((l) => l.id === state.selectedId)) return listState();
+
+    return state;
+}
+
+export function deleteGameWarning(playersCount) {
+    return playersCount > 0
+        ? `Smažou se i všechna stanoviště, ${pluralize(playersCount, 'hráč', 'hráči', 'hráčů')} a jejich fotky. Tato akce je nevratná.`
+        : 'Smažou se i všechna stanoviště. Tato akce je nevratná.';
+}
+
+// The radius slider covers 5–100 m, but older stations may have been saved
+// with up to 200 m — widen the range rather than silently clamping them.
+export const radiusSliderMax = (radius) => Math.max(100, Number(radius) || 0);
