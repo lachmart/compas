@@ -3,7 +3,10 @@
 use App\Enums\GameStatus;
 use App\Models\Game;
 use App\Models\Location;
+use App\Models\LocationAttempt;
+use App\Models\PlayerSession;
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 
 test('guests cannot access the games dashboard', function () {
     $this->get(route('admin.games.index'))->assertRedirect(route('login'));
@@ -109,6 +112,32 @@ test('a dozor can delete their own game', function () {
         ->assertRedirect(route('admin.games.index'));
 
     expect(Game::find($game->id))->toBeNull();
+});
+
+test('deleting a game also deletes task images and player attempt photos', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('task-images/task.jpg', 'x');
+    Storage::disk('public')->put('attempt-photos/attempt.jpg', 'x');
+
+    $user = User::factory()->create();
+    $game = Game::factory()->create(['owner_id' => $user->id]);
+    $location = Location::factory()->create([
+        'game_id' => $game->id,
+        'task_type' => 'pick_image',
+        'task_payload' => ['images' => ['task-images/task.jpg'], 'correct_index' => 0],
+    ]);
+    $player = PlayerSession::factory()->create(['game_id' => $game->id]);
+    LocationAttempt::factory()->create([
+        'player_session_id' => $player->id,
+        'location_id' => $location->id,
+        'submitted_photo_path' => 'attempt-photos/attempt.jpg',
+    ]);
+
+    $this->actingAs($user)->delete(route('admin.games.destroy', $game))
+        ->assertRedirect(route('admin.games.index'));
+
+    Storage::disk('public')->assertMissing('task-images/task.jpg');
+    Storage::disk('public')->assertMissing('attempt-photos/attempt.jpg');
 });
 
 test('the edit page lists locations with image urls and the correct index', function () {

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreGameRequest;
 use App\Http\Requests\Admin\UpdateGameRequest;
 use App\Models\Game;
+use App\Models\LocationAttempt;
 use App\Support\SlugGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -73,7 +74,14 @@ class GameController extends Controller
     {
         $this->authorize('delete', $game);
 
+        $taskImages = $game->locations->flatMap->mediaPaths();
+        $attemptPhotos = LocationAttempt::whereIn('player_session_id', $game->playerSessions()->pluck('id'))
+            ->whereNotNull('submitted_photo_path')
+            ->pluck('submitted_photo_path');
+
         $game->delete();
+
+        Storage::disk('public')->delete([...$taskImages, ...$attemptPhotos]);
 
         return redirect()->route('admin.games.index');
     }
