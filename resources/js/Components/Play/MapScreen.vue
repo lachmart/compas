@@ -61,6 +61,13 @@ watch(position, (value) => {
         playerMarker.setLatLng([value.lat, value.lng]);
     } else {
         playerMarker = L.circleMarker([value.lat, value.lng], { radius: 8, color: 'green' }).addTo(map);
+
+        // Frame the player and their target once, so the player's own marker
+        // isn't off-screen; later panning by the player is left alone.
+        const target = props.locations.find((location) => location.id === props.currentLocationId);
+        if (target) {
+            map.fitBounds([[value.lat, value.lng], [target.lat, target.lng]], { padding: [40, 40], maxZoom: 17 });
+        }
     }
 
     trail.push([value.lat, value.lng]);

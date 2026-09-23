@@ -118,7 +118,7 @@ const toggleView = () => {
         <button
             type="button"
             @click="toggleView"
-            class="absolute bottom-6 right-6 rounded-full bg-white p-4 text-2xl shadow-lg"
+            class="absolute bottom-6 right-6 z-[1000] rounded-full bg-white p-4 text-2xl shadow-lg"
         >
             {{ viewMode === 'compass' ? '🗺️' : '🧭' }}
         </button>
