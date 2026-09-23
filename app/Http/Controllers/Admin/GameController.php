@@ -10,7 +10,6 @@ use App\Models\Game;
 use App\Models\LocationAttempt;
 use App\Support\SlugGenerator;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -29,6 +28,7 @@ class GameController extends Controller
                 'playerSessions as finished_players_count' => fn ($q) => $q->whereNotNull('finished_at'),
             ])
             ->withMax('playerSessions as last_activity_at', 'last_seen_at')
+            ->withCasts(['last_activity_at' => 'datetime'])
             ->with(['locations:id,game_id,lat,lng,order'])
             ->latest()
             ->get()
@@ -38,9 +38,7 @@ class GameController extends Controller
                 'players_count' => $game->players_count,
                 'active_players_count' => $game->active_players_count,
                 'finished_players_count' => $game->finished_players_count,
-                'last_activity_at' => $game->last_activity_at
-                    ? Carbon::parse($game->last_activity_at)->toIso8601String()
-                    : null,
+                'last_activity_at' => $game->last_activity_at?->toIso8601String(),
                 'route' => $game->locations->map(fn ($l) => [(float) $l->lat, (float) $l->lng])->values()->all(),
             ]);
 

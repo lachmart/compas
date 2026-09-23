@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 
-defineProps({
+const props = defineProps({
     accept: { type: String, default: 'image/*' },
     multiple: { type: Boolean, default: false },
     label: { type: String, default: 'Přetáhni sem obrázky nebo klikni pro výběr' },
@@ -33,10 +33,29 @@ function onDragLeave() {
     if (dragDepth === 0) dragOver.value = false;
 }
 
+// The file picker enforces `accept`/`multiple`; a drop does not, so apply the
+// same rules by hand (`image/*`, `image/png`, `.jpg` style tokens).
+function matchesAccept(file) {
+    const tokens = props.accept.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean);
+    if (!tokens.length) return true;
+
+    const type = (file.type || '').toLowerCase();
+    const name = (file.name || '').toLowerCase();
+
+    return tokens.some((token) => {
+        if (token.startsWith('.')) return name.endsWith(token);
+        if (token.endsWith('/*')) return type.startsWith(token.slice(0, -1));
+
+        return type === token;
+    });
+}
+
 function onDrop(e) {
     dragDepth = 0;
     dragOver.value = false;
-    emitFiles(e.dataTransfer?.files);
+
+    const files = Array.from(e.dataTransfer?.files ?? []).filter(matchesAccept);
+    emitFiles(props.multiple ? files : files.slice(0, 1));
 }
 
 function onChange(e) {
