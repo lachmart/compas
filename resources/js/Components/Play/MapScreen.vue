@@ -34,20 +34,29 @@ const drawStationMarkers = () => {
     });
 };
 
+// Clear of the HUD (top, ~100 px) and the zoom/toggle buttons (bottom).
+const FRAME_OPTIONS = { paddingTopLeft: [40, 120], paddingBottomRight: [40, 120], maxZoom: 18, animate: false };
+
 onMounted(() => {
-    const first = props.locations[0];
+    // Start on the station the child is heading to, not the first one.
+    const start = props.locations[props.currentIndex] ?? props.locations[0];
     // The zoom control defaults to the top-left, right under the HUD's
     // avatar bubble; moved to the bottom-left, clear of both the HUD and the
     // compass/map toggle button (bottom-right).
-    map = L.map(mapEl.value, { zoomControl: false }).setView([first.lat, first.lng], 16);
+    map = L.map(mapEl.value, { zoomControl: false }).setView([start.lat, start.lng], 17);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap',
+        maxZoom: 19,
     }).addTo(map);
 
     drawStationMarkers();
 
     trailLine = L.polyline([], { color: '#0d9488', weight: 4, opacity: 0.7 }).addTo(map);
+
+    // A fix may already be known (e.g. cached by the sensors): place the
+    // player and frame the view now instead of waiting for the next change.
+    if (position.value) updatePlayer(position.value);
 });
 
 onBeforeUnmount(() => map?.remove());
@@ -64,7 +73,7 @@ watch(
     },
 );
 
-watch(position, (value) => {
+const updatePlayer = (value) => {
     if (!value || !map) return;
 
     if (playerMarker) {
@@ -80,18 +89,20 @@ watch(position, (value) => {
         // isn't off-screen; later panning by the player is left alone.
         const target = props.locations[props.currentIndex];
         if (target) {
-            map.fitBounds([[value.lat, value.lng], [target.lat, target.lng]], { padding: [40, 40], maxZoom: 17 });
+            map.fitBounds([[value.lat, value.lng], [target.lat, target.lng]], FRAME_OPTIONS);
         }
     }
 
     trail.push([value.lat, value.lng]);
     trailLine.setLatLngs(trail);
-});
+};
+
+watch(position, updatePlayer);
 </script>
 
 <template>
     <div class="relative h-dvh w-full">
-        <div ref="mapEl" class="h-full w-full"></div>
+        <div ref="mapEl" class="child-map h-full w-full"></div>
         <button
             v-if="geoError"
             type="button"
@@ -107,6 +118,21 @@ watch(position, (value) => {
 /* Leaflet sets these as raw innerHTML on markers, outside Vue's template
    compiler, so `scoped` (which relies on compiler-added attributes) would
    never match them here — kept global and uniquely prefixed instead. */
+/* Leaflet's zoom buttons, sized for small fingers (>= 56 px) and lifted
+   above the home indicator, level with the map/compass toggle. */
+.child-map .leaflet-bar a,
+.child-map .leaflet-bar a:hover {
+    width: 56px;
+    height: 56px;
+    line-height: 56px;
+    font-size: 28px;
+}
+
+.child-map .leaflet-bottom.leaflet-left .leaflet-control-zoom {
+    margin-left: 20px;
+    margin-bottom: max(1.5rem, env(safe-area-inset-bottom));
+}
+
 .child-player-marker__bubble {
     display: flex;
     align-items: center;
