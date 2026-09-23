@@ -131,10 +131,12 @@ onUnmounted(() => {
     <div v-else class="relative flex h-screen flex-col items-center justify-center gap-8 transition-colors duration-500" :class="backgroundColor">
         <ErrorFlash :show="hasArrivalError" />
         <TurnGuide v-if="guidance" :guidance="guidance" />
+        <!-- ➤ (U+27A4) points right, not up, so rotation needs an extra -90deg
+             to line the glyph up with `rotation` (0 = pointing ahead). -->
         <div
             v-else-if="hasHeading"
             class="text-6xl"
-            :style="{ transform: `rotate(${rotation}deg)` }"
+            :style="{ transform: `rotate(${rotation - 90}deg)` }"
         >➤</div>
         <div v-else class="text-6xl text-gray-400 opacity-30">◎</div>
         <p v-if="distance !== null" class="text-xl font-semibold text-gray-700">{{ Math.round(distance) }} m</p>
