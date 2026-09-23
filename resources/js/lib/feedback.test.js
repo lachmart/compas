@@ -166,3 +166,54 @@ test('celebrate plays the success tones and vibrates 60-40-60', async () => {
     expect(vibrateSpy).toHaveBeenCalledWith([60, 40, 60]);
     expect(oscillators.length).toBeGreaterThanOrEqual(3);
 });
+
+test('unlockAudio never throws without WebAudio or when the constructor blows up', async () => {
+    let feedback = await load();
+    expect(() => feedback.unlockAudio()).not.toThrow();
+
+    vi.stubGlobal('AudioContext', vi.fn(() => {
+        throw new Error('blocked');
+    }));
+    feedback = await load();
+    expect(() => feedback.unlockAudio()).not.toThrow();
+});
+
+test('unlockAudio creates the context once, resumes it and plays a silent buffer', async () => {
+    const resume = vi.fn(() => Promise.reject(new Error('not allowed')));
+    const { Ctor } = fakeAudioContext({ state: 'suspended', resume });
+    const sources = [];
+    const Unlockable = vi.fn(function () {
+        Ctor.call(this);
+        this.createBuffer = vi.fn(() => ({}));
+        this.createBufferSource = () => {
+            const source = { buffer: null, connect: vi.fn(), start: vi.fn() };
+            sources.push(source);
+
+            return source;
+        };
+    });
+    vi.stubGlobal('AudioContext', Unlockable);
+    const { unlockAudio, playSuccess } = await load();
+
+    unlockAudio();
+    expect(Unlockable).toHaveBeenCalledTimes(1);
+    expect(resume).toHaveBeenCalledTimes(1);
+    expect(sources).toHaveLength(1);
+    expect(sources[0].start).toHaveBeenCalled();
+    expect(sources[0].connect).toHaveBeenCalled();
+
+    // Idempotent: repeated calls (and later sounds) reuse the same context.
+    expect(() => unlockAudio()).not.toThrow();
+    playSuccess();
+    expect(Unlockable).toHaveBeenCalledTimes(1);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+});
+
+test('unlockAudio survives a context without buffer support', async () => {
+    const { Ctor } = fakeAudioContext({ state: 'suspended' });
+    vi.stubGlobal('AudioContext', Ctor);
+    const { unlockAudio } = await load();
+
+    expect(() => unlockAudio()).not.toThrow();
+    expect(Ctor).toHaveBeenCalledTimes(1);
+});

@@ -59,12 +59,16 @@ export function needsOrientationPermission() {
 // Only a grant is remembered, so a later tap can always ask again.
 // { force: true } asks the browser even when a grant is remembered (needed
 // to unlock events in a freshly loaded document on iOS); a failed forced
-// request does not forget the remembered grant.
+// request does not forget the remembered grant, and never joins a pending
+// request (that one may not have been started inside a gesture).
 export function requestOrientationPermission({ force = false } = {}) {
     if (!orientationEvent()) return Promise.resolve('unsupported');
     if (!hasRequestPermission()) return Promise.resolve('granted');
     if (!force && orientationGranted()) return Promise.resolve('granted');
-    if (inFlight) return inFlight;
+    // Join a pending request only when not forced: a forced call comes from
+    // a tap, and a pending request may have been started outside a gesture
+    // (then iOS rejects it), so the tap must issue its own request.
+    if (inFlight && !force) return inFlight;
 
     let request;
 
@@ -74,7 +78,7 @@ export function requestOrientationPermission({ force = false } = {}) {
         request = Promise.reject(error);
     }
 
-    inFlight = request
+    const pending = request
         .then((result) => {
             if (result === 'granted') {
                 rememberGrant();
@@ -86,10 +90,13 @@ export function requestOrientationPermission({ force = false } = {}) {
         })
         .catch(() => 'denied')
         .finally(() => {
-            inFlight = null;
+            // A newer (forced) request may have replaced this one.
+            if (inFlight === pending) inFlight = null;
         });
 
-    return inFlight;
+    inFlight = pending;
+
+    return pending;
 }
 
 export const ORIENTATION_WATCHDOG_MS = 1500;

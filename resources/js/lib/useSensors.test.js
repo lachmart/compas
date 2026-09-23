@@ -115,3 +115,19 @@ test('without a permission API (Android) there is never a tap', async () => {
 
     expect(sensors.needsTap.value).toBe(false);
 });
+
+test('a tap that ends in a denial stops offering the pulsing tap', async () => {
+    const requestPermission = vi.fn(() => Promise.reject(new Error('NotAllowedError')));
+    const sensors = await setup({ requestPermission });
+
+    await sensors.requestPermissions();
+    expect(sensors.needsTap.value).toBe(true);
+    expect(sensors.compassDenied.value).toBe(false);
+
+    requestPermission.mockImplementation(() => Promise.resolve('denied'));
+    await sensors.enableCompass();
+
+    expect(sensors.needsTap.value).toBe(false);
+    expect(sensors.compassDenied.value).toBe(true);
+    expect(sensors.orientationSupported.value).toBe(false);
+});

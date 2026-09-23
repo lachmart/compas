@@ -16,6 +16,31 @@ function audioContext() {
     return context;
 }
 
+// iOS/WebKit only lets an AudioContext play if it was created or resumed
+// inside a user gesture. Call this synchronously from a tap handler (before
+// any await) so later sounds — played after requests or timers — are heard.
+// Idempotent and never throws.
+export function unlockAudio() {
+    try {
+        const ctx = audioContext();
+        if (!ctx) return;
+
+        if (ctx.state !== 'running') {
+            Promise.resolve(ctx.resume?.()).catch(() => {});
+        }
+
+        // A one-sample silent buffer: playing something inside the gesture
+        // is what actually unlocks output on older iOS versions.
+        const buffer = ctx.createBuffer(1, 1, 22050);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.start(0);
+    } catch {
+        // No WebAudio or blocked; sound stays off.
+    }
+}
+
 // notes: [{ freq, at, dur }] with `at`/`dur` in seconds from now.
 function playNotes(notes, type) {
     try {

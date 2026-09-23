@@ -196,3 +196,29 @@ test('shouldShowTap only when gated, no event seen and the watchdog elapsed', as
     expect(shouldShowTap({ hasRequestPermission: false, eventSeen: false, elapsedMs: 10_000 })).toBe(false);
     expect(shouldShowTap({ hasRequestPermission: true, eventSeen: false, elapsedMs: 100, timeoutMs: 50 })).toBe(true);
 });
+
+test('a forced request (a tap) does not reuse a pending non-gesture request', async () => {
+    const resolvers = [];
+    const requestPermission = vi.fn(() => new Promise((r) => resolvers.push(r)));
+    iosLike(requestPermission);
+    const m = await load();
+
+    const quiet = m.requestOrientationPermission();
+    expect(requestPermission).toHaveBeenCalledTimes(1);
+
+    const tap = m.requestOrientationPermission({ force: true });
+    // Fresh call inside the "gesture", not the pending one.
+    expect(requestPermission).toHaveBeenCalledTimes(2);
+
+    resolvers[0]('denied');
+    await expect(quiet).resolves.toBe('denied');
+
+    // The settled quiet request must not clear the tap's in-flight request:
+    // a non-forced call now still joins the tap's prompt.
+    const joined = m.requestOrientationPermission();
+    expect(requestPermission).toHaveBeenCalledTimes(2);
+
+    resolvers[1]('granted');
+    await expect(tap).resolves.toBe('granted');
+    await expect(joined).resolves.toBe('granted');
+});

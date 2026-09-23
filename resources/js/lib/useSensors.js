@@ -1,4 +1,5 @@
 import { onUnmounted, ref } from 'vue';
+import { unlockAudio } from '@/lib/feedback';
 import { absoluteOrientation, relativeOrientation } from '@/lib/orientation';
 import {
     ORIENTATION_WATCHDOG_MS,
@@ -20,6 +21,10 @@ export function useSensors() {
     // show a tap target that calls enableCompass(). Driven by observed
     // events, see startWatchdog().
     const needsTap = ref(false);
+    // True once an explicit tap (enableCompass) ended in a denial: the tap
+    // target is then withdrawn (a pulsing button that can't work would only
+    // frustrate) and the UI shows a static "no compass" state instead.
+    const compassDenied = ref(false);
     let eventSeen = false;
     let watchdogTimer = null;
     let hasAbsoluteSource = false;
@@ -158,7 +163,23 @@ export function useSensors() {
     // For the tap target shown while needsTap is true: must be called
     // directly from the click handler (iOS user-gesture requirement).
     // Always asks the browser, even if a grant is remembered.
-    const enableCompass = () => requestOrientationPermission({ force: true }).then(handleOrientationResult);
+    const enableCompass = () => {
+        // Same tap unlocks sound for the game (iOS gesture rule).
+        unlockAudio();
+
+        return requestOrientationPermission({ force: true }).then((result) => {
+            if (result === 'granted') {
+                compassDenied.value = false;
+                listenForOrientation();
+
+                return;
+            }
+
+            orientationSupported.value = false;
+            needsTap.value = false;
+            compassDenied.value = true;
+        });
+    };
 
     onUnmounted(() => {
         stopWatchingGrant();
@@ -170,5 +191,5 @@ export function useSensors() {
         window.removeEventListener('deviceorientationabsolute', handleOrientation);
     });
 
-    return { position, heading, orientation, geoError, orientationSupported, requestPermissions, needsTap, enableCompass };
+    return { position, heading, orientation, geoError, orientationSupported, requestPermissions, needsTap, compassDenied, enableCompass };
 }
