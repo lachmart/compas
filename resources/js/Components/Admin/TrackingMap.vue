@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { isStale, progressLabel } from '@/lib/tracking';
+import { formatTime, isStale, progressLabel } from '@/lib/tracking';
 
 const props = defineProps({
     locations: { type: Array, required: true },
@@ -46,7 +46,12 @@ const syncPlayers = () => {
 
         marker.setLatLng(latLng);
         marker.setStyle(styleFor(player));
-        marker.setTooltipContent(`${player.nickname} · ${progressLabel(player)}`);
+
+        // Spec §6: a stale marker shows "naposledy viděn v HH:MM".
+        const tooltip = isStale(player, props.now)
+            ? `${player.nickname} · ${progressLabel(player)} · naposledy viděn v ${formatTime(player.last_seen_at)}`
+            : `${player.nickname} · ${progressLabel(player)}`;
+        marker.setTooltipContent(tooltip);
     });
 };
 

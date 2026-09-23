@@ -13,6 +13,7 @@ const emit = defineEmits(['close']);
 
 const detail = ref(null);
 const loadError = ref(false);
+const flagError = ref(false);
 
 const TASK_ICONS = {
     arrival_only: '📍',
@@ -21,18 +22,28 @@ const TASK_ICONS = {
     selfie_doing_something: '🤳',
 };
 
+// Guards against out-of-order responses: only the response from the most
+// recently started request is applied, so quickly switching players can't
+// have an earlier, slower response overwrite a later one.
+let requestToken = 0;
+
 const load = async () => {
+    const token = ++requestToken;
     loadError.value = false;
+
     try {
         const response = await window.axios.get(route('admin.games.players.show', [props.gameId, props.playerId]));
+        if (token !== requestToken) return;
         detail.value = response.data;
     } catch (error) {
+        if (token !== requestToken) return;
         console.error('Failed to load player detail', error);
         loadError.value = true;
     }
 };
 
 const toggleFlag = async (attempt) => {
+    flagError.value = false;
     try {
         const response = await window.axios.patch(
             route('admin.games.players.attempts.flag', [props.gameId, props.playerId, attempt.id]),
@@ -41,9 +52,16 @@ const toggleFlag = async (attempt) => {
         attempt.flagged_invalid = response.data.flagged_invalid;
     } catch (error) {
         console.error('Failed to flag photo', error);
-        loadError.value = true;
+        flagError.value = true;
     }
 };
+
+watch(
+    () => props.playerId,
+    () => {
+        detail.value = null;
+    },
+);
 
 watch(() => [props.playerId, props.version], load, { immediate: true });
 </script>
@@ -60,6 +78,7 @@ watch(() => [props.playerId, props.version], load, { immediate: true });
         </div>
 
         <p v-if="loadError" class="text-sm text-red-600">Nepodařilo se načíst data. Zkus to znovu.</p>
+        <p v-if="flagError" class="text-sm text-red-600">Označení fotky se nepodařilo uložit.</p>
 
         <table v-if="detail" class="w-full text-sm">
             <thead>
