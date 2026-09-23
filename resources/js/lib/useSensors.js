@@ -1,17 +1,25 @@
 import { onUnmounted, ref } from 'vue';
+import { absoluteOrientation } from '@/lib/orientation';
 
 export function useSensors() {
     const position = ref(null);
     const heading = ref(null);
     const geoError = ref(null);
     const orientationSupported = ref(true);
+    const orientation = ref(null);
+    let hasAbsoluteSource = false;
 
     let watchId = null;
 
     const handleOrientation = (event) => {
-        if (typeof event.webkitCompassHeading === 'number') {
-            heading.value = event.webkitCompassHeading;
-        } else if (typeof event.alpha === 'number') {
+        const absolute = absoluteOrientation(event);
+
+        if (absolute) {
+            hasAbsoluteSource = true;
+            orientation.value = absolute;
+            heading.value = (360 - absolute.alpha) % 360;
+        } else if (!hasAbsoluteSource && typeof event.alpha === 'number') {
+            // Relative-only fallback (no absolute source seen yet).
             heading.value = (360 - event.alpha) % 360;
         }
     };
@@ -54,6 +62,10 @@ export function useSensors() {
                 const result = await OrientationEvent.requestPermission();
 
                 if (result === 'granted') {
+                    // Chrome now also exposes requestPermission (unlike Safari,
+                    // which only ever fires plain deviceorientation), so we
+                    // register both here too to get absolute heading there.
+                    window.addEventListener('deviceorientationabsolute', handleOrientation);
                     window.addEventListener('deviceorientation', handleOrientation);
                 } else {
                     orientationSupported.value = false;
@@ -77,5 +89,5 @@ export function useSensors() {
         window.removeEventListener('deviceorientationabsolute', handleOrientation);
     });
 
-    return { position, heading, geoError, orientationSupported, requestPermissions };
+    return { position, heading, orientation, geoError, orientationSupported, requestPermissions };
 }
