@@ -112,7 +112,8 @@ const toggleView = () => {
             <MapScreen
                 v-else
                 :locations="locations"
-                :current-location-id="currentLocation.id"
+                :current-index="currentIndex"
+                :avatar="player.avatar"
             />
 
             <button
