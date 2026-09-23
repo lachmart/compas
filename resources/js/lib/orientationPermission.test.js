@@ -165,3 +165,34 @@ test('works when sessionStorage is missing entirely', async () => {
     await expect(m.requestOrientationPermission()).resolves.toBe('granted');
     expect(m.orientationGranted()).toBe(true);
 });
+
+test('force asks the browser even when a grant is remembered, and a failure keeps the grant', async () => {
+    const requestPermission = vi.fn(() => Promise.reject(new Error('NotAllowedError')));
+    iosLike(requestPermission);
+    globalThis.sessionStorage.setItem('kompas.orientation', 'granted');
+    const m = await load();
+
+    const pending = m.requestOrientationPermission({ force: true });
+    expect(requestPermission).toHaveBeenCalledTimes(1);
+    await expect(pending).resolves.toBe('denied');
+
+    expect(m.orientationGranted()).toBe(true);
+    expect(globalThis.sessionStorage.getItem('kompas.orientation')).toBe('granted');
+});
+
+test('force without a permission API is simply granted', async () => {
+    globalThis.DeviceOrientationEvent = class {};
+    const m = await load();
+
+    await expect(m.requestOrientationPermission({ force: true })).resolves.toBe('granted');
+});
+
+test('shouldShowTap only when gated, no event seen and the watchdog elapsed', async () => {
+    const { shouldShowTap, ORIENTATION_WATCHDOG_MS } = await load();
+
+    expect(shouldShowTap({ hasRequestPermission: true, eventSeen: false, elapsedMs: ORIENTATION_WATCHDOG_MS })).toBe(true);
+    expect(shouldShowTap({ hasRequestPermission: true, eventSeen: false, elapsedMs: ORIENTATION_WATCHDOG_MS - 1 })).toBe(false);
+    expect(shouldShowTap({ hasRequestPermission: true, eventSeen: true, elapsedMs: 10_000 })).toBe(false);
+    expect(shouldShowTap({ hasRequestPermission: false, eventSeen: false, elapsedMs: 10_000 })).toBe(false);
+    expect(shouldShowTap({ hasRequestPermission: true, eventSeen: false, elapsedMs: 100, timeoutMs: 50 })).toBe(true);
+});

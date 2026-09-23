@@ -1,0 +1,117 @@
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+
+// Drives useSensors' permission/watchdog logic outside a component (Vue only
+// warns about onUnmounted there). window is a plain EventTarget stand-in.
+let target;
+
+const orientationEvent = (angles) => Object.assign(new Event('deviceorientation'), angles);
+
+const setup = async ({ requestPermission, remembered = false } = {}) => {
+    vi.resetModules();
+
+    const DOE = class {};
+    if (requestPermission) DOE.requestPermission = requestPermission;
+
+    target = new EventTarget();
+    globalThis.DeviceOrientationEvent = DOE;
+    globalThis.window = {
+        DeviceOrientationEvent: DOE,
+        addEventListener: target.addEventListener.bind(target),
+        removeEventListener: target.removeEventListener.bind(target),
+    };
+    const store = new Map(remembered ? [['kompas.orientation', 'granted']] : []);
+    globalThis.sessionStorage = {
+        getItem: (k) => store.get(k) ?? null,
+        setItem: (k, v) => store.set(k, v),
+    };
+
+    const { useSensors } = await import('./useSensors');
+
+    return useSensors();
+};
+
+const flush = () => vi.advanceTimersByTimeAsync(0);
+
+beforeEach(() => {
+    vi.useFakeTimers();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+});
+
+afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    delete globalThis.DeviceOrientationEvent;
+    delete globalThis.window;
+    delete globalThis.sessionStorage;
+});
+
+test('remembered grant but no events after a reload: re-asks quietly, then shows the tap', async () => {
+    const requestPermission = vi.fn(() => Promise.reject(new Error('NotAllowedError')));
+    const sensors = await setup({ requestPermission, remembered: true });
+
+    sensors.requestPermissions();
+    expect(requestPermission).toHaveBeenCalledTimes(1);
+    await flush();
+    expect(sensors.needsTap.value).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(sensors.needsTap.value).toBe(true);
+});
+
+test('remembered grant with events flowing never shows the tap', async () => {
+    const sensors = await setup({ requestPermission: vi.fn(() => Promise.resolve('granted')), remembered: true });
+
+    sensors.requestPermissions();
+    await flush();
+    target.dispatchEvent(orientationEvent({ alpha: 10, beta: 5, gamma: 1 }));
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(sensors.needsTap.value).toBe(false);
+    expect(sensors.heading.value).toBe(350);
+});
+
+test('events with null angles (no real sensor) do not count', async () => {
+    const sensors = await setup({ requestPermission: vi.fn(() => Promise.resolve('granted')), remembered: true });
+
+    sensors.requestPermissions();
+    target.dispatchEvent(orientationEvent({ alpha: null, beta: null, gamma: null }));
+    await vi.advanceTimersByTimeAsync(1500);
+
+    expect(sensors.needsTap.value).toBe(true);
+});
+
+test('no grant and a rejected request outside a gesture shows the tap at once', async () => {
+    const sensors = await setup({ requestPermission: vi.fn(() => Promise.reject(new Error('NotAllowedError'))) });
+
+    await sensors.requestPermissions();
+
+    expect(sensors.needsTap.value).toBe(true);
+    expect(sensors.orientationSupported.value).toBe(false);
+});
+
+test('enableCompass asks synchronously, re-listens and the first event hides the tap', async () => {
+    const requestPermission = vi.fn(() => Promise.reject(new Error('NotAllowedError')));
+    const sensors = await setup({ requestPermission, remembered: true });
+
+    sensors.requestPermissions();
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(sensors.needsTap.value).toBe(true);
+
+    requestPermission.mockImplementation(() => Promise.resolve('granted'));
+    const pending = sensors.enableCompass();
+    expect(requestPermission).toHaveBeenCalledTimes(2);
+    await pending;
+    expect(sensors.orientationSupported.value).toBe(true);
+
+    target.dispatchEvent(orientationEvent({ alpha: 0, beta: 5, gamma: 1 }));
+    expect(sensors.needsTap.value).toBe(false);
+});
+
+test('without a permission API (Android) there is never a tap', async () => {
+    const sensors = await setup();
+
+    sensors.requestPermissions();
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(sensors.needsTap.value).toBe(false);
+});

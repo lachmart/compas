@@ -45,6 +45,10 @@ export function orientationGranted() {
     return grantedInMemory || storedGrant();
 }
 
+// "No grant remembered yet": the browser has a permission API and we have
+// no record of a grant. This is NOT "events are flowing" — after a full
+// reload iOS may need a fresh requestPermission() despite a remembered
+// grant. The UI signal for that is useSensors' needsTap (event watchdog).
 export function needsOrientationPermission() {
     return hasRequestPermission() && !orientationGranted();
 }
@@ -53,9 +57,13 @@ export function needsOrientationPermission() {
 // it), otherwise iOS rejects the request. Resolves to 'granted', 'denied'
 // (also for a rejected request, e.g. outside a gesture) or 'unsupported'.
 // Only a grant is remembered, so a later tap can always ask again.
-export function requestOrientationPermission() {
+// { force: true } asks the browser even when a grant is remembered (needed
+// to unlock events in a freshly loaded document on iOS); a failed forced
+// request does not forget the remembered grant.
+export function requestOrientationPermission({ force = false } = {}) {
     if (!orientationEvent()) return Promise.resolve('unsupported');
-    if (orientationGranted()) return Promise.resolve('granted');
+    if (!hasRequestPermission()) return Promise.resolve('granted');
+    if (!force && orientationGranted()) return Promise.resolve('granted');
     if (inFlight) return inFlight;
 
     let request;
@@ -82,6 +90,19 @@ export function requestOrientationPermission() {
         });
 
     return inFlight;
+}
+
+export const ORIENTATION_WATCHDOG_MS = 1500;
+
+// Whether to show the "tap to enable the compass" target: only where the
+// browser gates orientation behind a permission, and only when no real
+// orientation event has arrived within the watchdog window.
+export function shouldShowTap({ hasRequestPermission: gated, eventSeen, elapsedMs, timeoutMs = ORIENTATION_WATCHDOG_MS }) {
+    return Boolean(gated) && !eventSeen && elapsedMs >= timeoutMs;
+}
+
+export function orientationPermissionGated() {
+    return hasRequestPermission();
 }
 
 // Notifies when the permission gets granted anywhere in the app (e.g. the

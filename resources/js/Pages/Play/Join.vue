@@ -137,6 +137,7 @@ const play = () => {
                 :class="{ '!ring-2 !ring-red-400': form.errors.nickname }"
             />
 
+            <!-- aria-disabled, not disabled: a tap before picking must still reach play() to fire the nudge hint. -->
             <button
                 type="submit"
                 :aria-disabled="!form.avatar || form.processing"

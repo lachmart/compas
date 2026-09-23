@@ -1,6 +1,13 @@
 import { onUnmounted, ref } from 'vue';
 import { absoluteOrientation, relativeOrientation } from '@/lib/orientation';
-import { needsOrientationPermission, onOrientationGranted, requestOrientationPermission } from '@/lib/orientationPermission';
+import {
+    ORIENTATION_WATCHDOG_MS,
+    needsOrientationPermission,
+    onOrientationGranted,
+    orientationPermissionGated,
+    requestOrientationPermission,
+    shouldShowTap,
+} from '@/lib/orientationPermission';
 
 export function useSensors() {
     const position = ref(null);
@@ -8,15 +15,25 @@ export function useSensors() {
     const geoError = ref(null);
     const orientationSupported = ref(true);
     const orientation = ref(null);
-    // True on iOS while the compass permission is still missing (e.g. a
-    // returning player who skipped the join screen): show a tap target
-    // that calls enableCompass().
-    const needsTap = ref(needsOrientationPermission());
+    // True when the compass needs a tap to start (iOS: permission missing,
+    // or a remembered grant that didn't unlock events after a reload):
+    // show a tap target that calls enableCompass(). Driven by observed
+    // events, see startWatchdog().
+    const needsTap = ref(false);
+    let eventSeen = false;
+    let watchdogTimer = null;
     let hasAbsoluteSource = false;
 
     let watchId = null;
 
     const handleOrientation = (event) => {
+        if (!eventSeen && typeof event.beta === 'number' && typeof event.gamma === 'number') {
+            eventSeen = true;
+            needsTap.value = false;
+            clearTimeout(watchdogTimer);
+            watchdogTimer = null;
+        }
+
         const absolute = absoluteOrientation(event);
 
         if (absolute) {
@@ -63,6 +80,28 @@ export function useSensors() {
         );
     };
 
+    // Watchdog: on permission-gated browsers (iOS, recent Chrome) only a
+    // real orientation event proves the sensors are unlocked. A grant
+    // remembered from before a full reload is not enough on iOS, so if no
+    // event arrives in time we ask for a tap (needsTap -> enableCompass).
+    const startWatchdog = () => {
+        clearTimeout(watchdogTimer);
+        watchdogTimer = null;
+
+        if (eventSeen || !orientationPermissionGated()) return;
+
+        const startedAt = Date.now();
+
+        watchdogTimer = setTimeout(() => {
+            watchdogTimer = null;
+            needsTap.value = shouldShowTap({
+                hasRequestPermission: orientationPermissionGated(),
+                eventSeen,
+                elapsedMs: Date.now() - startedAt,
+            });
+        }, ORIENTATION_WATCHDOG_MS);
+    };
+
     const listenForOrientation = () => {
         // Chrome also exposes deviceorientationabsolute (true heading);
         // Safari only ever fires plain deviceorientation. Registering the
@@ -70,7 +109,7 @@ export function useSensors() {
         window.addEventListener('deviceorientationabsolute', handleOrientation);
         window.addEventListener('deviceorientation', handleOrientation);
         orientationSupported.value = true;
-        needsTap.value = false;
+        startWatchdog();
     };
 
     const handleOrientationResult = (result) => {
@@ -78,7 +117,7 @@ export function useSensors() {
             listenForOrientation();
         } else {
             orientationSupported.value = false;
-            needsTap.value = needsOrientationPermission();
+            needsTap.value = orientationPermissionGated();
         }
     };
 
@@ -96,8 +135,16 @@ export function useSensors() {
         }
 
         if (!needsOrientationPermission()) {
-            // No prompt needed (Android) or already granted this session.
+            // No prompt needed (Android) or a grant is remembered from this
+            // session. Listen right away; the watchdog catches the iOS case
+            // where the grant doesn't carry over to a reloaded page.
             listenForOrientation();
+
+            if (orientationPermissionGated()) {
+                // Re-ask quietly: may unlock events without a prompt, or
+                // reject outside a gesture (then the watchdog/tap handles it).
+                requestOrientationPermission({ force: true });
+            }
 
             return;
         }
@@ -108,12 +155,14 @@ export function useSensors() {
         handleOrientationResult(await requestOrientationPermission());
     };
 
-    // For a tap target shown while needsTap is true: must be called
+    // For the tap target shown while needsTap is true: must be called
     // directly from the click handler (iOS user-gesture requirement).
-    const enableCompass = () => requestOrientationPermission().then(handleOrientationResult);
+    // Always asks the browser, even if a grant is remembered.
+    const enableCompass = () => requestOrientationPermission({ force: true }).then(handleOrientationResult);
 
     onUnmounted(() => {
         stopWatchingGrant();
+        clearTimeout(watchdogTimer);
         if (watchId !== null) {
             navigator.geolocation.clearWatch(watchId);
         }
