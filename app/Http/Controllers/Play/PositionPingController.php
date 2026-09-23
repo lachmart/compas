@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Play;
 
+use App\Events\PlayerPositionUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Play\StorePositionPingRequest;
 use App\Models\Game;
@@ -14,7 +15,9 @@ class PositionPingController extends Controller
     {
         $playerSession = $this->resolvePlayerSession($game);
 
-        $playerSession->pings()->create($request->validated());
+        $ping = $playerSession->pings()->create($request->validated());
+
+        PlayerPositionUpdated::dispatch($ping);
 
         return response()->noContent();
     }

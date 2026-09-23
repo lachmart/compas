@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Play;
 
 use App\Enums\AttemptStatus;
 use App\Enums\TaskType;
+use App\Events\PlayerProgressed;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Play\SubmitAnswerRequest;
 use App\Http\Requests\Play\SubmitPhotoRequest;
@@ -99,6 +100,11 @@ class AttemptController extends Controller
     {
         $attempt->update(['status' => AttemptStatus::Completed, 'completed_at' => now()]);
         $playerSession->advance();
+
+        PlayerProgressed::dispatch(
+            $playerSession,
+            $playerSession->isFinished() ? 'finished' : 'completed_location',
+        );
     }
 
     private function ensureCurrentTarget(PlayerSession $playerSession, Location $location): void

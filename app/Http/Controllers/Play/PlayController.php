@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Play;
 
+use App\Events\PlayerProgressed;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Play\JoinGameRequest;
 use App\Models\Game;
@@ -49,6 +50,8 @@ class PlayController extends Controller
             'started_at' => now(),
             'last_seen_at' => now(),
         ]);
+
+        PlayerProgressed::dispatch($playerSession, 'joined');
 
         session(['player_session_id' => $playerSession->id]);
 
