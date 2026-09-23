@@ -1,77 +1,225 @@
 <script setup>
+import { computed, nextTick, ref, watch } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link, useForm, router } from '@inertiajs/vue3';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
+import GameHeader from '@/Components/Admin/GameHeader.vue';
+import GameMap from '@/Components/Admin/GameMap.vue';
+import GameSettings from '@/Components/Admin/GameSettings.vue';
+import LocationForm from '@/Components/Admin/LocationForm.vue';
 import LocationList from '@/Components/Admin/LocationList.vue';
+import SharePanel from '@/Components/Admin/SharePanel.vue';
+import SegmentedTabs from '@/Components/UI/SegmentedTabs.vue';
+import { addState, editState, listState, mapModeFor, reconcileWithLocations } from '@/lib/editorPanel';
+import { locationLabel } from '@/lib/taskTypes';
 
 const props = defineProps({
     game: Object,
     locations: Array,
+    play_url: String,
+    players_count: { type: Number, default: 0 },
 });
 
-const form = useForm({
-    name: props.game.name,
-    slug: props.game.slug,
+// { panel: 'list' | 'edit' | 'add', selectedId, draft } — see lib/editorPanel.js.
+const state = ref(listState());
+
+const mapRef = ref(null);
+const panelEl = ref(null);
+const formRef = ref(null);
+
+const mapMode = computed(() => mapModeFor(state.value.panel));
+const formOpen = computed(() => state.value.panel !== 'list');
+const isPublished = computed(() => props.game.status === 'published');
+
+const selectedIndex = computed(() => props.locations.findIndex((l) => l.id === state.value.selectedId));
+const selectedLocation = computed(() => props.locations[selectedIndex.value] ?? null);
+
+const tabs = computed(() => [
+    { label: 'Editor', href: route('admin.games.edit', props.game.id), active: true },
+    { label: 'Sledování', href: route('admin.games.tracking', props.game.id), active: false },
+]);
+
+const mapHint = computed(() => {
+    if (state.value.panel === 'add') {
+        return state.value.draft?.lat == null ? 'Klikni do mapy, kam stanoviště umístit' : 'Přetáhni značku nebo klikni jinam';
+    }
+    if (state.value.panel === 'edit') return 'Přetáhni značku nebo klikni do mapy';
+
+    return null;
 });
 
-const submit = () => form.put(route('admin.games.update', props.game.id));
+// Opening another location would silently drop unsaved changes in the open form.
+const hasUnsavedChanges = () => {
+    if (state.value.panel === 'add') return true;
+    if (state.value.panel !== 'edit' || !selectedLocation.value) return false;
 
-const togglePublish = () => {
-    const routeName = props.game.status === 'published' ? 'admin.games.unpublish' : 'admin.games.publish';
-    router.patch(route(routeName, props.game.id));
+    const { draft } = state.value;
+    const location = selectedLocation.value;
+    const moved = draft.lat !== location.lat || draft.lng !== location.lng || draft.arrival_radius_m !== location.arrival_radius_m;
+
+    return moved || Boolean(formRef.value?.isDirty());
+};
+
+const openLocation = (id) => {
+    if (id === state.value.selectedId || hasUnsavedChanges()) return;
+
+    const location = props.locations.find((l) => l.id === id);
+    if (!location) return;
+
+    state.value = editState(location);
+    mapRef.value?.flyTo(location.lat, location.lng);
+};
+
+const startAdding = () => {
+    state.value = addState();
+};
+
+const backToList = () => {
+    state.value = listState();
+};
+
+// GameMap only reports { lat, lng }; keep the radius.
+const onMapDraft = (position) => {
+    if (!state.value.draft) return;
+    state.value = { ...state.value, draft: { ...state.value.draft, ...position } };
+};
+
+const onFormDraft = (draft) => {
+    state.value = { ...state.value, draft };
+};
+
+watch(() => props.locations, (locations) => {
+    state.value = reconcileWithLocations(state.value, locations);
+});
+
+// Every panel switch starts at the top (the panel scrolls independently of the map).
+watch(() => [state.value.panel, state.value.selectedId], async () => {
+    await nextTick();
+    if (panelEl.value) panelEl.value.scrollTop = 0;
+});
+
+// Location delete (from the open form).
+const pendingDelete = ref(null); // { location, position }
+const deleting = ref(false);
+
+const deleteWarning = computed(() =>
+    isPublished.value ? 'Hráči, kteří už toto stanoviště plní, přijdou o svůj průběh na něm.' : null,
+);
+
+const askDelete = () => {
+    if (!selectedLocation.value) return;
+    pendingDelete.value = { location: selectedLocation.value, position: selectedIndex.value + 1 };
+};
+
+const confirmDelete = () => {
+    const { location } = pendingDelete.value;
+
+    deleting.value = true;
+    router.delete(route('admin.games.locations.destroy', [props.game.id, location.id]), {
+        preserveScroll: true,
+        onSuccess: () => {
+            pendingDelete.value = null;
+            backToList();
+        },
+        onFinish: () => {
+            deleting.value = false;
+        },
+    });
 };
 </script>
 
 <template>
     <Head :title="game.name" />
 
-    <AuthenticatedLayout>
-        <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">{{ game.name }}</h2>
+    <AuthenticatedLayout full-bleed>
+        <template #breadcrumb>
+            <Link :href="route('admin.games.index')" class="hover:text-teal-700">Moje hry</Link>
+            <span class="text-slate-300" aria-hidden="true">/</span>
+            <span class="max-w-[40vw] truncate font-medium text-slate-800 sm:max-w-xs">{{ game.name }}</span>
         </template>
 
-        <div class="py-12">
-            <div class="mx-auto max-w-4xl space-y-6 sm:px-6 lg:px-8">
-                <form @submit.prevent="submit" class="space-y-4 bg-white p-6 shadow-sm sm:rounded-lg">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Název hry</label>
-                        <input v-model="form.name" type="text" class="mt-1 block w-full rounded border-gray-300" />
-                        <p v-if="form.errors.name" class="mt-1 text-sm text-red-600">{{ form.errors.name }}</p>
-                    </div>
+        <template #tabs>
+            <SegmentedTabs :tabs="tabs" />
+        </template>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">URL (slug)</label>
-                        <input v-model="form.slug" type="text" class="mt-1 block w-full rounded border-gray-300" />
-                        <p v-if="form.errors.slug" class="mt-1 text-sm text-red-600">{{ form.errors.slug }}</p>
-                    </div>
-
-                    <div class="flex items-center gap-4">
-                        <button type="submit" :disabled="form.processing" class="rounded bg-indigo-600 px-4 py-2 text-white">
-                            Uložit
-                        </button>
-                        <button
-                            type="button"
-                            @click="togglePublish"
-                            class="rounded px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            :class="game.status === 'published' ? 'bg-gray-200' : 'bg-green-600 text-white'"
-                            :disabled="game.status !== 'published' && locations.length === 0"
-                            :title="game.status !== 'published' && locations.length === 0 ? 'Nejdřív přidej stanoviště' : ''"
-                        >
-                            {{ game.status === 'published' ? 'Skrýt hru' : 'Publikovat' }}
-                        </button>
-                        <Link
-                            :href="route('admin.games.tracking', game.id)"
-                            class="rounded bg-gray-100 px-4 py-2 text-gray-800"
-                        >
-                            Sledovat hráče
-                        </Link>
-                    </div>
-                </form>
-
-                <div class="bg-white p-6 shadow-sm sm:rounded-lg">
-                    <h3 class="mb-4 text-lg font-medium text-gray-800">Stanoviště</h3>
-                    <LocationList :game="game" :locations="locations" />
+        <div class="flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row">
+            <aside
+                ref="panelEl"
+                class="min-h-0 flex-1 overflow-y-auto border-slate-200 bg-white lg:w-[420px] lg:flex-none lg:shrink-0 lg:border-r"
+            >
+                <div v-if="state.panel === 'list'" class="space-y-6 p-5">
+                    <GameHeader :game="game" :locations-count="locations.length" :players-count="players_count" />
+                    <SharePanel :play-url="play_url" :slug="game.slug" :published="isPublished" />
+                    <LocationList
+                        :game="game"
+                        :locations="locations"
+                        :selected-id="state.selectedId"
+                        :locked="formOpen"
+                        @select="openLocation"
+                        @add="startAdding"
+                    />
+                    <GameSettings :game="game" :players-count="players_count" />
                 </div>
+
+                <LocationForm
+                    v-else
+                    ref="formRef"
+                    :key="state.panel === 'edit' ? `edit:${state.selectedId}` : 'add'"
+                    :game="game"
+                    :location="selectedLocation"
+                    :position="selectedIndex + 1"
+                    :draft="state.draft"
+                    @update:draft="onFormDraft"
+                    @located="({ lat, lng }) => mapRef?.flyTo(lat, lng)"
+                    @saved="backToList"
+                    @cancel="backToList"
+                    @delete="askDelete"
+                />
+            </aside>
+
+            <div class="relative isolate order-first h-[45vh] shrink-0 border-b border-slate-200 lg:order-none lg:h-auto lg:flex-1 lg:border-b-0">
+                <GameMap
+                    ref="mapRef"
+                    :locations="locations"
+                    :selected-id="state.selectedId"
+                    :draft="state.draft"
+                    :mode="mapMode"
+                    @select="openLocation"
+                    @update:draft="onMapDraft"
+                />
+
+                <div class="pointer-events-none absolute inset-x-0 top-3 z-[1000] flex justify-center px-14">
+                    <p
+                        v-if="mapHint"
+                        class="flex items-center gap-2 rounded-full bg-slate-900/85 px-4 py-2 text-center text-sm font-medium text-white shadow-lg backdrop-blur"
+                    >
+                        <span class="h-2 w-2 shrink-0 rounded-full bg-orange-400" aria-hidden="true" />
+                        {{ mapHint }}
+                    </p>
+                </div>
+
+                <button
+                    v-if="locations.length"
+                    type="button"
+                    class="absolute right-3 top-3 z-[1000] flex h-[34px] w-[34px] items-center justify-center rounded-lg bg-white text-slate-600 shadow ring-1 ring-slate-900/15 transition hover:bg-slate-50 hover:text-teal-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                    title="Zobrazit všechna stanoviště"
+                    aria-label="Zobrazit všechna stanoviště"
+                    @click="mapRef?.fitAll()"
+                >
+                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path d="M3.28 2.22a.75.75 0 0 0-1.06 1.06L5.44 6.5H2.75a.75.75 0 0 0 0 1.5h4.5A.75.75 0 0 0 8 7.25v-4.5a.75.75 0 0 0-1.5 0v2.69L3.28 2.22ZM13.5 2.75a.75.75 0 0 0-1.5 0v4.5c0 .414.336.75.75.75h4.5a.75.75 0 0 0 0-1.5h-2.69l3.22-3.22a.75.75 0 0 0-1.06-1.06L13.5 5.44V2.75ZM3.28 17.78l3.22-3.22v2.69a.75.75 0 0 0 1.5 0v-4.5a.75.75 0 0 0-.75-.75h-4.5a.75.75 0 0 0 0 1.5h2.69l-3.22 3.22a.75.75 0 1 0 1.06 1.06ZM13.5 14.56l3.22 3.22a.75.75 0 1 0 1.06-1.06l-3.22-3.22h2.69a.75.75 0 0 0 0-1.5h-4.5a.75.75 0 0 0-.75.75v4.5a.75.75 0 0 0 1.5 0v-2.69Z" />
+                    </svg>
+                </button>
             </div>
         </div>
+
+        <ConfirmDialog
+            :show="pendingDelete !== null"
+            :message="pendingDelete ? `Smazat stanoviště ${locationLabel(pendingDelete.location, pendingDelete.position)}? Tato akce je nevratná.` : ''"
+            :warning="deleteWarning"
+            :processing="deleting"
+            @confirm="confirmDelete"
+            @cancel="pendingDelete = null"
+        />
     </AuthenticatedLayout>
 </template>

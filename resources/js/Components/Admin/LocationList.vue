@@ -1,138 +1,119 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
-import LocationForm from '@/Components/Admin/LocationForm.vue';
-import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
+import TaskTypeIcon from '@/Components/Admin/TaskTypeIcon.vue';
+import Button from '@/Components/UI/Button.vue';
 import { locationLabel, taskTypeLabel } from '@/lib/taskTypes';
 
 const props = defineProps({
-    game: Object,
-    locations: Array,
+    game: { type: Object, required: true },
+    locations: { type: Array, required: true },
+    selectedId: { type: Number, default: null },
+    // True while a location form is open: reordering is disabled then.
+    locked: { type: Boolean, default: false },
 });
+const emit = defineEmits(['select', 'add']);
 
-const editingId = ref(null);
-const isAdding = ref(false);
 const draggedId = ref(null);
-const pendingDelete = ref(null); // { location, position }
-const deleting = ref(false);
-
-const formOpen = computed(() => editingId.value !== null || isAdding.value);
-
-const deleteWarning = computed(() =>
-    props.game.status === 'published'
-        ? 'Hráči, kteří už toto stanoviště plní, přijdou o svůj průběh na něm.'
-        : null,
-);
+const dropTargetId = ref(null);
 
 const onDragStart = (location) => { draggedId.value = location.id; };
-const onDragEnd = () => { draggedId.value = null; };
+const onDragEnd = () => {
+    draggedId.value = null;
+    dropTargetId.value = null;
+};
+const onDragOver = (location) => {
+    if (draggedId.value !== null) dropTargetId.value = location.id;
+};
 const onDrop = (targetLocation) => {
     const ids = props.locations.map((l) => l.id);
     const from = ids.indexOf(draggedId.value);
     draggedId.value = null;
+    dropTargetId.value = null;
 
-    if (formOpen.value || from === -1) return;
+    if (props.locked || from === -1) return;
 
     const to = ids.indexOf(targetLocation.id);
+    if (from === to) return;
     ids.splice(to, 0, ids.splice(from, 1)[0]);
 
     router.patch(route('admin.games.locations.reorder', props.game.id), { order: ids }, { preserveScroll: true });
 };
-
-const closeForm = () => {
-    editingId.value = null;
-    isAdding.value = false;
-};
-
-const editLocation = (location) => {
-    isAdding.value = false;
-    editingId.value = location.id;
-};
-
-const startAdding = () => {
-    editingId.value = null;
-    isAdding.value = true;
-};
-
-const confirmDelete = () => {
-    const { location } = pendingDelete.value;
-    if (editingId.value === location.id) closeForm();
-
-    deleting.value = true;
-    router.delete(route('admin.games.locations.destroy', [props.game.id, location.id]), {
-        preserveScroll: true,
-        onSuccess: () => {
-            pendingDelete.value = null;
-        },
-        onFinish: () => {
-            deleting.value = false;
-        },
-    });
-};
 </script>
 
 <template>
-    <div class="space-y-4">
-        <ul class="divide-y rounded border bg-white">
+    <section aria-labelledby="locations-heading">
+        <div class="mb-2 flex items-baseline justify-between px-1">
+            <h2 id="locations-heading" class="text-sm font-semibold text-slate-800">Stanoviště</h2>
+            <p v-if="locations.length > 1 && !locked" class="text-xs text-slate-400">Pořadí změníš přetažením</p>
+        </div>
+
+        <ol v-if="locations.length" class="space-y-0.5">
             <li
                 v-for="(location, index) in locations"
                 :key="location.id"
-                :draggable="!formOpen"
+                :draggable="!locked"
+                class="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 transition"
+                :class="[
+                    location.id === selectedId ? 'bg-orange-50 ring-1 ring-orange-200' : 'hover:bg-slate-50',
+                    draggedId === location.id ? 'opacity-40' : '',
+                    dropTargetId === location.id && draggedId !== location.id ? 'ring-2 ring-teal-400' : '',
+                ]"
+                @click="emit('select', location.id)"
                 @dragstart="onDragStart(location)"
                 @dragend="onDragEnd"
-                @dragover.prevent
+                @dragover.prevent="onDragOver(location)"
                 @drop.prevent="onDrop(location)"
             >
-                <div
-                    class="flex items-center justify-between gap-4 p-3"
-                    :class="editingId === location.id ? 'border-l-4 border-indigo-500 bg-indigo-50' : ''"
+                <span
+                    v-if="!locked"
+                    class="-ml-1 cursor-grab text-slate-300 transition group-hover:text-slate-500 active:cursor-grabbing"
+                    title="Přetáhni pro změnu pořadí"
+                    aria-hidden="true"
                 >
-                    <span class="font-medium text-gray-900">
-                        {{ locationLabel(location, index + 1) }}
-                        <span class="font-normal text-gray-500">· {{ taskTypeLabel(location.task_type) }}</span>
+                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <circle cx="7" cy="5" r="1.4" /><circle cx="13" cy="5" r="1.4" />
+                        <circle cx="7" cy="10" r="1.4" /><circle cx="13" cy="10" r="1.4" />
+                        <circle cx="7" cy="15" r="1.4" /><circle cx="13" cy="15" r="1.4" />
+                    </svg>
+                </span>
+
+                <span
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white shadow-sm ring-2 ring-white"
+                    :class="location.id === selectedId ? 'bg-orange-500' : 'bg-teal-600'"
+                >
+                    {{ index + 1 }}
+                </span>
+
+                <button
+                    type="button"
+                    class="min-w-0 flex-1 text-left focus:outline-none focus-visible:underline"
+                    @click.stop="emit('select', location.id)"
+                >
+                    <span class="block truncate text-sm font-medium text-slate-900">{{ locationLabel(location, index + 1) }}</span>
+                    <span class="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
+                        <TaskTypeIcon :type="location.task_type" class="h-3.5 w-3.5 shrink-0" />
+                        {{ taskTypeLabel(location.task_type) }}
                     </span>
-                    <div class="flex items-center gap-8">
-                        <button
-                            v-if="editingId !== location.id"
-                            type="button"
-                            class="text-indigo-600"
-                            @click="editLocation(location)"
-                        >Upravit</button>
-                        <button
-                            type="button"
-                            class="text-sm text-red-400 hover:text-red-600"
-                            @click="pendingDelete = { location, position: index + 1 }"
-                        >Smazat</button>
-                    </div>
-                </div>
+                </button>
 
-                <div v-if="editingId === location.id" class="border-l-4 border-indigo-500 bg-indigo-50/40 p-3">
-                    <LocationForm
-                        :key="location.id"
-                        :game="game"
-                        :location="location"
-                        :heading="`Upravuješ: ${locationLabel(location, index + 1)}`"
-                        @saved="closeForm"
-                        @cancel="closeForm"
-                    />
-                </div>
+                <svg class="h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-slate-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+                </svg>
             </li>
-            <li v-if="locations.length === 0" class="p-3 text-gray-500">Zatím žádná stanoviště.</li>
-        </ul>
+        </ol>
 
-        <button v-if="!formOpen" type="button" class="rounded bg-indigo-600 px-4 py-2 text-white" @click="startAdding">
+        <p v-else class="rounded-xl bg-slate-50 px-4 py-5 text-center text-sm text-slate-500">
+            Zatím žádná stanoviště. Přidej první a umísti ho kliknutím do mapy.
+        </p>
+
+        <Button variant="secondary" block class="mt-3" @click="emit('add')">
+            <template #icon>
+                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path d="M10 4a1 1 0 0 1 1 1v4h4a1 1 0 1 1 0 2h-4v4a1 1 0 1 1-2 0v-4H5a1 1 0 1 1 0-2h4V5a1 1 0 0 1 1-1Z" />
+                </svg>
+            </template>
             Přidat stanoviště
-        </button>
-
-        <LocationForm v-if="isAdding" :game="game" heading="Nové stanoviště" @saved="closeForm" @cancel="closeForm" />
-
-        <ConfirmDialog
-            :show="pendingDelete !== null"
-            :message="pendingDelete ? `Smazat stanoviště ${locationLabel(pendingDelete.location, pendingDelete.position)}? Tato akce je nevratná.` : ''"
-            :warning="deleteWarning"
-            :processing="deleting"
-            @confirm="confirmDelete"
-            @cancel="pendingDelete = null"
-        />
-    </div>
+        </Button>
+    </section>
 </template>
