@@ -1,8 +1,10 @@
 <script setup>
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { arrowRotationDegrees, bearingDegrees, distanceMeters, proximityColor } from '@/lib/geo';
+import { cameraHeading, nextPosture, turnGuidance } from '@/lib/orientation';
 import { useSensors } from '@/lib/useSensors';
 import ErrorFlash from '@/Components/Play/ErrorFlash.vue';
+import TurnGuide from '@/Components/Play/TurnGuide.vue';
 
 const props = defineProps({
     location: { type: Object, required: true },
@@ -10,7 +12,7 @@ const props = defineProps({
 });
 const emit = defineEmits(['arrived']);
 
-const { position, heading, geoError, orientationSupported, requestPermissions } = useSensors();
+const { position, heading, orientation, geoError, orientationSupported, requestPermissions } = useSensors();
 requestPermissions();
 
 const hasArrivalError = ref(false);
@@ -23,12 +25,32 @@ const distance = computed(() => {
 
 const hasHeading = computed(() => orientationSupported.value && heading.value !== null);
 
+const bearing = computed(() => {
+    if (!position.value) return null;
+
+    return bearingDegrees(position.value.lat, position.value.lng, props.location.lat, props.location.lng);
+});
+
 const rotation = computed(() => {
-    if (!position.value || !hasHeading.value) return 0;
+    if (bearing.value === null || !hasHeading.value) return 0;
 
-    const bearing = bearingDegrees(position.value.lat, position.value.lng, props.location.lat, props.location.lng);
+    return arrowRotationDegrees(bearing.value, heading.value);
+});
 
-    return arrowRotationDegrees(bearing, heading.value);
+// 'flat' shows the classic arrow; 'upright' (phone held like a camera)
+// shows turn guidance. nextPosture() applies the hysteresis band.
+const posture = ref('flat');
+
+watch(orientation, (value) => {
+    if (value) posture.value = nextPosture(posture.value, value.beta, value.gamma);
+});
+
+const guidance = computed(() => {
+    if (posture.value !== 'upright' || !orientation.value || bearing.value === null) return null;
+
+    const { alpha, beta, gamma } = orientation.value;
+
+    return turnGuidance(bearing.value, cameraHeading(alpha, beta, gamma));
 });
 
 const backgroundColor = computed(() => {
@@ -100,8 +122,9 @@ onUnmounted(() => {
 
     <div v-else class="relative flex h-screen flex-col items-center justify-center gap-8 transition-colors duration-500" :class="backgroundColor">
         <ErrorFlash :show="hasArrivalError" />
+        <TurnGuide v-if="guidance" :guidance="guidance" />
         <div
-            v-if="hasHeading"
+            v-else-if="hasHeading"
             class="text-6xl"
             :style="{ transform: `rotate(${rotation}deg)` }"
         >➤</div>
