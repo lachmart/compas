@@ -8,7 +8,7 @@ use App\Models\PlayerSession;
 test('joining a game marks the player as seen', function () {
     $game = Game::factory()->create(['status' => GameStatus::Published]);
 
-    $this->post(route('play.join', $game->slug), ['nickname' => 'Anna']);
+    $this->post(route('play.join', $game->slug), ['avatar' => 'fox', 'nickname' => 'Anna']);
 
     expect(PlayerSession::first()->last_seen_at)->not->toBeNull();
 });

@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Play;
 
+use App\Enums\Avatar;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class JoinGameRequest extends FormRequest
 {
@@ -14,7 +16,8 @@ class JoinGameRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nickname' => ['required', 'string', 'max:50'],
+            'avatar' => ['required', Rule::enum(Avatar::class)],
+            'nickname' => ['nullable', 'string', 'max:50'],
         ];
     }
 }

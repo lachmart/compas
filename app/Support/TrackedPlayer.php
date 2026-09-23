@@ -19,6 +19,7 @@ class TrackedPlayer
         return [
             'id' => $playerSession->id,
             'nickname' => $playerSession->nickname,
+            'avatar' => $playerSession->avatar?->value,
             'color' => $playerSession->color(),
             'current_location_index' => $playerSession->current_location_index,
             'locations_count' => $game->locations_count ?? $game->locations()->count(),

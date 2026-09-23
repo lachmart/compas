@@ -33,7 +33,7 @@ test('a child can join a published game with just a nickname', function () {
     $game = Game::factory()->create(['status' => GameStatus::Published]);
     Location::factory()->create(['game_id' => $game->id, 'order' => 1]);
 
-    $response = $this->post(route('play.join', $game->slug), ['nickname' => 'Anežka']);
+    $response = $this->post(route('play.join', $game->slug), ['avatar' => 'fox', 'nickname' => 'Anežka']);
 
     $response->assertRedirect(route('play.show', $game->slug));
     $session = PlayerSession::first();
@@ -42,11 +42,38 @@ test('a child can join a published game with just a nickname', function () {
         ->and($session->current_location_index)->toBe(0);
 });
 
-test('joining requires a nickname', function () {
+test('a player joins by picking an animal, the name is optional', function () {
     $game = Game::factory()->create(['status' => GameStatus::Published]);
 
-    $this->post(route('play.join', $game->slug), ['nickname' => ''])
-        ->assertSessionHasErrors('nickname');
+    $this->post(route('play.join', $game->slug), ['avatar' => 'owl'])->assertRedirect();
+
+    $session = PlayerSession::first();
+    expect($session->avatar)->toBe(\App\Enums\Avatar::Owl)
+        ->and($session->nickname)->toBe('Sova');
+});
+
+test('an adult-typed name is kept alongside the animal', function () {
+    $game = Game::factory()->create(['status' => GameStatus::Published]);
+
+    $this->post(route('play.join', $game->slug), ['avatar' => 'fox', 'nickname' => '  Anička '])->assertRedirect();
+
+    expect(PlayerSession::first()->nickname)->toBe('Anička');
+});
+
+test('joining requires a known animal', function () {
+    $game = Game::factory()->create(['status' => GameStatus::Published]);
+
+    $this->post(route('play.join', $game->slug), ['avatar' => 'dragon'])->assertSessionHasErrors('avatar');
+    $this->post(route('play.join', $game->slug), [])->assertSessionHasErrors('avatar');
+});
+
+test('the play screen receives the player avatar', function () {
+    $game = Game::factory()->create(['status' => GameStatus::Published]);
+    Location::factory()->create(['game_id' => $game->id, 'order' => 1]);
+    $session = PlayerSession::factory()->create(['game_id' => $game->id, 'avatar' => 'bear']);
+
+    $this->withSession(['player_session_id' => $session->id])->get(route('play.show', $game->slug))
+        ->assertInertia(fn ($page) => $page->where('player.avatar', 'bear'));
 });
 
 test('visiting with an active session shows the play screen with game state', function () {

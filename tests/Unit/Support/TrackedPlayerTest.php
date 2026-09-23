@@ -21,6 +21,7 @@ test('make() describes a player with their latest position', function () {
     expect($data)->toMatchArray([
         'id' => $session->id,
         'nickname' => 'Anna',
+        'avatar' => 'fox',
         'color' => $session->color(),
         'current_location_index' => 1,
         'locations_count' => 3,

@@ -45,7 +45,7 @@ test('a ping broadcasts the new position on the game tracking channel', function
 test('joining broadcasts a joined progress event', function () {
     addLocation($this->game, 1);
 
-    $this->post(route('play.join', $this->game->slug), ['nickname' => 'Anna']);
+    $this->post(route('play.join', $this->game->slug), ['avatar' => 'fox', 'nickname' => 'Anna']);
 
     Event::assertDispatched(PlayerProgressed::class, fn (PlayerProgressed $e) => $e->kind === 'joined'
         && $e->broadcastWith()['player']['nickname'] === 'Anna'

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Avatar;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,9 +13,10 @@ class PlayerSession extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['game_id', 'nickname', 'current_location_index', 'started_at', 'finished_at', 'last_seen_at'];
+    protected $fillable = ['game_id', 'nickname', 'avatar', 'current_location_index', 'started_at', 'finished_at', 'last_seen_at'];
 
     protected $casts = [
+        'avatar' => Avatar::class,
         'current_location_index' => 'integer',
         'started_at' => 'datetime',
         'finished_at' => 'datetime',

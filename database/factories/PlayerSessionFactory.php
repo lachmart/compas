@@ -12,6 +12,7 @@ class PlayerSessionFactory extends Factory
         return [
             'game_id' => Game::factory(),
             'nickname' => $this->faker->firstName(),
+            'avatar' => 'fox',
             'current_location_index' => 0,
             'started_at' => now(),
             'finished_at' => null,

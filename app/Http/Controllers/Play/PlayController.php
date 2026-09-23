@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Play;
 
+use App\Enums\Avatar;
 use App\Events\PlayerProgressed;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Play\JoinGameRequest;
@@ -37,15 +38,20 @@ class PlayController extends Controller
             'player' => [
                 'current_location_index' => $playerSession->current_location_index,
                 'finished_at' => $playerSession->finished_at,
+                'avatar' => $playerSession->avatar?->value,
             ],
         ]);
     }
 
     public function join(JoinGameRequest $request, Game $game)
     {
+        $avatar = Avatar::from($request->validated('avatar'));
+        $nickname = trim((string) $request->validated('nickname'));
+
         $playerSession = PlayerSession::create([
             'game_id' => $game->id,
-            'nickname' => $request->validated('nickname'),
+            'nickname' => $nickname !== '' ? $nickname : $avatar->label(),
+            'avatar' => $avatar,
             'current_location_index' => 0,
             'started_at' => now(),
             'last_seen_at' => now(),

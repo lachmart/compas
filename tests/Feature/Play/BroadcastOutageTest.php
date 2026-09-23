@@ -50,6 +50,6 @@ test('joining still succeeds when the broadcaster is unreachable', function () {
     $game = Game::factory()->create(['status' => GameStatus::Published]);
     addLocation($game, 1);
 
-    $this->post(route('play.join', $game->slug), ['nickname' => 'Anna'])
+    $this->post(route('play.join', $game->slug), ['avatar' => 'fox', 'nickname' => 'Anna'])
         ->assertRedirect(route('play.show', $game->slug));
 });

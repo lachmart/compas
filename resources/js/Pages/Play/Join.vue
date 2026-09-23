@@ -5,7 +5,7 @@ const props = defineProps({
     game: Object,
 });
 
-const form = useForm({ nickname: '' });
+const form = useForm({ nickname: '', avatar: 'fox' });
 
 const submit = () => form.post(route('play.join', props.game.slug));
 </script>
