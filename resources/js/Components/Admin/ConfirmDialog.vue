@@ -1,7 +1,6 @@
 <script setup>
 import Modal from '@/Components/Modal.vue';
-import DangerButton from '@/Components/DangerButton.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
+import Button from '@/Components/UI/Button.vue';
 
 defineProps({
     show: { type: Boolean, required: true },
@@ -16,11 +15,13 @@ const emit = defineEmits(['confirm', 'cancel']);
 <template>
     <Modal :show="show" max-width="md" @close="emit('cancel')">
         <div class="space-y-4 p-6">
-            <p class="text-gray-900">{{ message }}</p>
-            <p v-if="warning" class="rounded bg-amber-50 p-3 text-sm text-amber-800">{{ warning }}</p>
+            <p class="text-slate-900">{{ message }}</p>
+            <p v-if="warning" class="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{{ warning }}</p>
             <div class="flex justify-end gap-3">
-                <SecondaryButton type="button" @click="emit('cancel')">Zrušit</SecondaryButton>
-                <DangerButton type="button" :disabled="processing" @click="emit('confirm')">{{ confirmLabel }}</DangerButton>
+                <Button variant="secondary" type="button" @click="emit('cancel')">Zrušit</Button>
+                <Button variant="danger" type="button" :processing="processing" @click="emit('confirm')">
+                    {{ confirmLabel }}
+                </Button>
             </div>
         </div>
     </Modal>
