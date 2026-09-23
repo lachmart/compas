@@ -56,7 +56,32 @@ class LocationController extends Controller
         $this->authorize('update', $game);
 
         $files = $location->mediaPaths();
-        $location->delete();
+
+        DB::transaction(function () use ($game, $location) {
+            $orderedIds = $game->locations()->pluck('id');
+            $deletedPosition = $orderedIds->search($location->id);
+
+            $location->delete();
+
+            $remaining = $orderedIds->count() - 1;
+
+            // Players past the deleted location shift back by one so they
+            // keep pointing at the same location; a player on the deleted
+            // location stays at the same index, which now targets the next
+            // location.
+            $game->playerSessions()
+                ->whereNull('finished_at')
+                ->where('current_location_index', '>', $deletedPosition)
+                ->decrement('current_location_index');
+
+            // Anyone now pointing past the end of the (shorter) list has
+            // effectively finished the game.
+            $game->playerSessions()
+                ->whereNull('finished_at')
+                ->where('current_location_index', '>=', $remaining)
+                ->update(['finished_at' => now()]);
+        });
+
         Storage::disk('public')->delete($files);
 
         return back();
