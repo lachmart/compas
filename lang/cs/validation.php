@@ -1,0 +1,68 @@
+<?php
+
+// Czech messages for the validation rules this app uses. Rules not listed
+// here fall back to English (APP_FALLBACK_LOCALE).
+return [
+    'array' => 'Pole :attribute musí být seznam.',
+    'between' => [
+        'numeric' => ':Attribute musí být mezi :min a :max.',
+        'string' => ':Attribute musí mít :min až :max znaků.',
+        'array' => ':Attribute musí mít :min až :max položek.',
+        'file' => ':Attribute musí mít :min až :max kB.',
+    ],
+    'boolean' => ':Attribute musí být ano, nebo ne.',
+    'confirmed' => 'Potvrzení pole :attribute se neshoduje.',
+    'current_password' => 'Heslo není správné.',
+    'distinct' => ':Attribute obsahuje duplicitní hodnotu.',
+    'email' => ':Attribute musí být platná e-mailová adresa.',
+    'enum' => 'Vybraná hodnota pole :attribute není platná.',
+    'exists' => 'Vybraná hodnota pole :attribute není platná.',
+    'file' => ':Attribute musí být soubor.',
+    'image' => ':Attribute musí být obrázek.',
+    'in' => 'Vybraná hodnota pole :attribute není platná.',
+    'integer' => ':Attribute musí být celé číslo.',
+    'lowercase' => ':Attribute musí být malými písmeny.',
+    'max' => [
+        'numeric' => ':Attribute může být nejvýš :max.',
+        'string' => ':Attribute může mít nejvýš :max znaků.',
+        'array' => ':Attribute může mít nejvýš :max položek.',
+        'file' => ':Attribute může mít nejvýš :max kB.',
+    ],
+    'min' => [
+        'numeric' => ':Attribute musí být alespoň :min.',
+        'string' => ':Attribute musí mít alespoň :min znaků.',
+        'array' => ':Attribute musí mít alespoň :min položek.',
+        'file' => ':Attribute musí mít alespoň :min kB.',
+    ],
+    'numeric' => ':Attribute musí být číslo.',
+    'password' => [
+        'letters' => ':Attribute musí obsahovat alespoň jedno písmeno.',
+        'mixed' => ':Attribute musí obsahovat velké i malé písmeno.',
+        'numbers' => ':Attribute musí obsahovat alespoň jedno číslo.',
+        'symbols' => ':Attribute musí obsahovat alespoň jeden speciální znak.',
+        'uncompromised' => 'Toto heslo se objevilo v úniku dat. Zvolte prosím jiné.',
+    ],
+    'regex' => ':Attribute má neplatný formát.',
+    'required' => ':Attribute je povinné pole.',
+    'string' => ':Attribute musí být text.',
+    'unique' => 'Tento údaj (:attribute) už někdo používá.',
+    'uploaded' => 'Soubor :attribute se nepodařilo nahrát.',
+
+    'attributes' => [
+        'name' => 'jméno',
+        'email' => 'e-mail',
+        'password' => 'heslo',
+        'current_password' => 'současné heslo',
+        'slug' => 'URL (slug)',
+        'nickname' => 'přezdívka',
+        'lat' => 'zeměpisná šířka',
+        'lng' => 'zeměpisná délka',
+        'arrival_radius_m' => 'poloměr',
+        'task_type' => 'typ úkolu',
+        'images' => 'obrázky',
+        'reference_image' => 'referenční obrázek',
+        'correct_index' => 'správný obrázek',
+        'photo' => 'fotka',
+        'selected_index' => 'odpověď',
+    ],
+];
