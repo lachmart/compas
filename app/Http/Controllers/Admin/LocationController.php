@@ -23,6 +23,7 @@ class LocationController extends Controller
             'arrival_radius_m' => $request->validated('arrival_radius_m'),
             'task_type' => $request->validated('task_type'),
             'task_payload' => $this->buildTaskPayload($request),
+            'name' => $request->validated('name'),
             'order' => $game->locations()->max('order') + 1,
         ]);
 
@@ -39,6 +40,7 @@ class LocationController extends Controller
             'arrival_radius_m' => $request->validated('arrival_radius_m'),
             'task_type' => $request->validated('task_type'),
             'task_payload' => $this->buildTaskPayload($request),
+            'name' => $request->validated('name'),
         ]);
 
         return back();

@@ -69,7 +69,9 @@ onMounted(() => {
                 html: `<div class="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white shadow">${location.position}</div>`,
                 iconSize: [28, 28],
             }),
-        }).addTo(map);
+        })
+            .bindTooltip(location.name || `Stanoviště ${location.position}`)
+            .addTo(map);
         bounds.push([location.lat, location.lng]);
     });
 

@@ -91,7 +91,10 @@ watch(() => [props.playerId, props.version], load, { immediate: true });
             </thead>
             <tbody>
                 <tr v-for="attempt in detail.attempts" :key="attempt.id" class="border-t align-top">
-                    <td class="py-2">{{ TASK_ICONS[attempt.task_type] }} {{ attempt.location_position }}</td>
+                    <td class="py-2">
+                        {{ TASK_ICONS[attempt.task_type] }} {{ attempt.location_position }}
+                        <span v-if="attempt.location_name" class="text-gray-500">{{ attempt.location_name }}</span>
+                    </td>
                     <td>{{ attempt.arrived_at ? formatTime(attempt.arrived_at) : '—' }}</td>
                     <td>{{ attempt.completed_at ? formatTime(attempt.completed_at) : '—' }}</td>
                     <td>

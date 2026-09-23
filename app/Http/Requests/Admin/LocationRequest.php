@@ -20,6 +20,7 @@ class LocationRequest extends FormRequest
             'lng' => ['required', 'numeric', 'between:-180,180'],
             'arrival_radius_m' => ['required', 'integer', 'min:5', 'max:200'],
             'task_type' => ['required', Rule::enum(TaskType::class)],
+            'name' => ['nullable', 'string', 'max:100'],
         ];
 
         return match ($this->input('task_type')) {

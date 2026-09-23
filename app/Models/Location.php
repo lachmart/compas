@@ -11,7 +11,7 @@ class Location extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['game_id', 'order', 'lat', 'lng', 'arrival_radius_m', 'task_type', 'task_payload'];
+    protected $fillable = ['game_id', 'order', 'name', 'lat', 'lng', 'arrival_radius_m', 'task_type', 'task_payload'];
 
     protected $casts = [
         'task_type' => TaskType::class,
