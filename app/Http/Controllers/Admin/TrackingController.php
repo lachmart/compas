@@ -17,6 +17,11 @@ class TrackingController extends Controller
     {
         $this->authorize('view', $game);
 
+        // Load the count once and cache it
+        $game->loadCount('locations');
+        // Ensure the attribute is accessible by getting the count value
+        $locations_count_value = $game->locations_count;
+
         return Inertia::render('Admin/Games/Tracking', [
             'game' => ['id' => $game->id, 'name' => $game->name, 'slug' => $game->slug],
             'locations' => $game->locations()->get()->values()->map(fn ($location, $index) => [
@@ -27,10 +32,14 @@ class TrackingController extends Controller
                 'task_type' => $location->task_type->value,
             ]),
             'players' => $game->playerSessions()
-                ->with(['latestPing', 'game'])
+                ->with(['latestPing'])
                 ->orderBy('started_at')
                 ->get()
-                ->map(fn (PlayerSession $playerSession) => TrackedPlayer::make($playerSession)),
+                ->map(function (PlayerSession $session) use ($game) {
+                    // Ensure the game relation points to our pre-loaded instance with locations_count
+                    $session->setRelation('game', $game);
+                    return TrackedPlayer::make($session);
+                }),
         ]);
     }
 

@@ -14,13 +14,14 @@ class TrackedPlayer
     public static function make(PlayerSession $playerSession): array
     {
         $ping = $playerSession->latestPing;
+        $game = $playerSession->game;
 
         return [
             'id' => $playerSession->id,
             'nickname' => $playerSession->nickname,
             'color' => $playerSession->color(),
             'current_location_index' => $playerSession->current_location_index,
-            'locations_count' => $playerSession->game->locations()->count(),
+            'locations_count' => $game->locations_count ?? $game->locations()->count(),
             'finished_at' => $playerSession->finished_at?->toIso8601String(),
             'last_seen_at' => ($playerSession->last_seen_at ?? $playerSession->started_at)->toIso8601String(),
             'position' => $ping ? [

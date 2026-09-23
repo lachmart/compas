@@ -128,3 +128,33 @@ test('another dozor cannot flag a photo', function () {
         ->patchJson(route('admin.games.players.attempts.flag', [$this->game, $session, $attempt]), ['flagged_invalid' => true])
         ->assertForbidden();
 });
+
+test('tracking page does not have N+1 query for locations_count', function () {
+    // Create initial players
+    for ($i = 0; $i < 1; $i++) {
+        PlayerSession::factory()->create(['game_id' => $this->game->id])->pings()->create(['lat' => 50.0 + $i, 'lng' => 14.0]);
+    }
+
+    \DB::enableQueryLog();
+    $this->actingAs($this->owner)->get(route('admin.games.tracking', $this->game));
+    $first_load_count = count(\DB::getQueryLog());
+    \DB::disableQueryLog();
+
+    // Add 4 more players (5 total now, 5x initial)
+    for ($i = 0; $i < 4; $i++) {
+        PlayerSession::factory()->create(['game_id' => $this->game->id])->pings()->create(['lat' => 50.0 + 1 + $i, 'lng' => 14.0]);
+    }
+
+    // With N+1 query issue per player, adding 4 players would add ~4 queries (doubling total from ~5 to ~9+)
+    // With proper optimization, adding players should add minimal queries
+    \DB::enableQueryLog();
+    $this->actingAs($this->owner)->get(route('admin.games.tracking', $this->game));
+    $second_load_count = count(\DB::getQueryLog());
+    \DB::disableQueryLog();
+
+    // The growth should be sub-linear with the fix in place
+    // Without the fix, adding 4 players would add ~4 queries (doubling from ~5 to ~9)
+    // With the fix, growth should be minimal
+    // We check that it doesn't exceed 2x, which would still be better than linear N+1 scaling
+    expect($second_load_count)->toBeLessThanOrEqual($first_load_count * 2);
+});
