@@ -29,7 +29,7 @@ class LocationRequest extends FormRequest
             TaskType::PickImage->value => $rules + [
                 'existing_images' => ['sometimes', 'array'],
                 // Only images currently attached to THIS location may be kept.
-                'existing_images.*' => ['string', Rule::in($this->currentLocation()?->images() ?? [])],
+                'existing_images.*' => ['string', 'distinct', Rule::in($this->currentLocation()?->images() ?? [])],
                 'images' => ['sometimes', 'array'],
                 'images.*' => ['image', 'max:5120'],
                 'correct_index' => ['required', 'integer', 'min:0', function ($attribute, $value, $fail) {
@@ -47,6 +47,21 @@ class LocationRequest extends FormRequest
             ],
             default => $rules,
         };
+    }
+
+    public function messages(): array
+    {
+        return [
+            'correct_index.required' => 'Označ správný obrázek.',
+            'reference_image.required' => 'Nahraj referenční obrázek.',
+            'images.*.image' => 'Soubor musí být obrázek.',
+            'reference_image.image' => 'Soubor musí být obrázek.',
+            'images.*.max' => 'Obrázek může mít nejvýš 5 MB.',
+            'reference_image.max' => 'Obrázek může mít nejvýš 5 MB.',
+            'existing_images.*.in' => 'Stávající obrázek už u stanoviště není — obnov stránku.',
+            'existing_images.*.distinct' => 'Obrázek je vybraný víckrát.',
+            'name.max' => 'Název může mít nejvýš 100 znaků.',
+        ];
     }
 
     public function after(): array

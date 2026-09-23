@@ -74,6 +74,14 @@ test('existing_images may not reference another location\'s image', function () 
     Storage::disk('public')->assertExists('task-images/foreign.jpg');
 });
 
+test('existing_images rejects duplicate entries', function () {
+    updateLocation($this, [
+        'task_type' => 'pick_image',
+        'existing_images' => ['task-images/a.jpg', 'task-images/a.jpg', 'task-images/a.jpg'],
+        'correct_index' => 0,
+    ])->assertSessionHasErrors('existing_images.0');
+});
+
 test('a new location cannot claim existing images', function () {
     $this->actingAs($this->user)->post(route('admin.games.locations.store', $this->game), $this->base + [
         'task_type' => 'pick_image',

@@ -85,6 +85,26 @@ test('pick_image rejects a correct_index outside the uploaded images', function 
     expect(Location::count())->toBe(0);
 });
 
+test('forgetting to pick a correct image shows a Czech validation message', function () {
+    $user = User::factory()->create();
+    $game = Game::factory()->create(['owner_id' => $user->id]);
+
+    $response = $this->actingAs($user)->post(route('admin.games.locations.store', $game), [
+        'lat' => 50.08,
+        'lng' => 14.43,
+        'arrival_radius_m' => 15,
+        'task_type' => 'pick_image',
+        'images' => [
+            UploadedFile::fake()->image('a.jpg'),
+            UploadedFile::fake()->image('b.jpg'),
+            UploadedFile::fake()->image('c.jpg'),
+        ],
+    ]);
+
+    $response->assertSessionHasErrors('correct_index');
+    expect(session('errors')->get('correct_index'))->toBe(['Označ správný obrázek.']);
+});
+
 test('pick_image accepts a correct_index within range of the uploaded images', function () {
     $user = User::factory()->create();
     $game = Game::factory()->create(['owner_id' => $user->id]);
