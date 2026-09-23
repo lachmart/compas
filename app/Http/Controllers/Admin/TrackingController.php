@@ -18,7 +18,8 @@ class TrackingController extends Controller
         $this->authorize('view', $game);
 
         return Inertia::render('Admin/Games/Tracking', [
-            'game' => ['id' => $game->id, 'name' => $game->name, 'slug' => $game->slug],
+            'game' => ['id' => $game->id, 'name' => $game->name, 'slug' => $game->slug, 'status' => $game->status->value],
+            'play_url' => route('play.show', $game->slug),
             'locations' => $game->locations()->get()->values()->map(fn ($location, $index) => [
                 'id' => $location->id,
                 'position' => $index + 1,

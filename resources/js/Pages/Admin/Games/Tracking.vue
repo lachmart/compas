@@ -4,6 +4,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PlayerCard from '@/Components/Admin/PlayerCard.vue';
 import PlayerDetail from '@/Components/Admin/PlayerDetail.vue';
+import SharePanel from '@/Components/Admin/SharePanel.vue';
 import TrackingMap from '@/Components/Admin/TrackingMap.vue';
 import Button from '@/Components/UI/Button.vue';
 import EmptyState from '@/Components/UI/EmptyState.vue';
@@ -16,6 +17,7 @@ const props = defineProps({
     game: Object,
     locations: Array,
     players: Array,
+    play_url: String,
 });
 
 const POLL_INTERVAL_MS = 5000;
@@ -108,6 +110,8 @@ const connectionState = computed(() => {
     return pollFailed.value ? 'error' : 'polling';
 });
 
+const selectedLivePlayer = computed(() => livePlayers.value.find((p) => p.id === selectedPlayerId.value) ?? null);
+
 const sortedPlayers = computed(() => sortPlayers(livePlayers.value, now.value));
 
 const stats = computed(() => {
@@ -169,6 +173,7 @@ onBeforeUnmount(() => {
                         :player-id="selectedPlayerId"
                         :version="detailVersion"
                         :now="now"
+                        :live-player="selectedLivePlayer"
                     />
                 </div>
 
@@ -223,13 +228,16 @@ onBeforeUnmount(() => {
                     <EmptyState
                         v-else
                         title="Zatím se nikdo nepřipojil"
-                        text="Pošli dětem odkaz z editoru."
+                        text="Pošli dětem odkaz nebo jim ukaž QR kód."
                     >
                         <template #icon>
                             <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
                             </svg>
                         </template>
+                        <div v-if="play_url" class="mt-6 w-full text-left">
+                            <SharePanel :play-url="play_url" :slug="game.slug" :published="game.status === 'published'" />
+                        </div>
                         <template #actions>
                             <Button size="sm" variant="secondary" :href="route('admin.games.edit', game.id)">Otevřít editor</Button>
                         </template>

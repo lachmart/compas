@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import TaskTypeIcon from '@/Components/Admin/TaskTypeIcon.vue';
 import Button from '@/Components/UI/Button.vue';
 import Spinner from '@/Components/UI/Spinner.vue';
@@ -15,6 +15,10 @@ const props = defineProps({
     version: { type: Number, default: 0 },
     // Ticker from the parent for "naposledy před …".
     now: { type: Number, default: () => Date.now() },
+    // The player's entry from the live list (pings/polls keep it fresh). The
+    // fetched detail only refreshes on progress, so the header reads live
+    // fields from here and falls back to the fetched snapshot.
+    livePlayer: { type: Object, default: null },
 });
 
 const detail = ref(null);
@@ -25,6 +29,8 @@ const flagError = ref(false);
 // recently started request is applied, so quickly switching players can't
 // have an earlier, slower response overwrite a later one.
 let requestToken = 0;
+
+const headerPlayer = computed(() => props.livePlayer ?? detail.value?.player ?? null);
 
 const load = async () => {
     const token = ++requestToken;
@@ -67,21 +73,21 @@ watch(() => [props.playerId, props.version], load, { immediate: true });
 
 <template>
     <div class="space-y-5">
-        <div v-if="detail" class="flex items-start gap-3">
+        <div v-if="detail && headerPlayer" class="flex items-start gap-3">
             <span
                 class="mt-1.5 h-3.5 w-3.5 shrink-0 rounded-full ring-2 ring-white"
-                :style="{ backgroundColor: isStale(detail.player, now) ? '#94a3b8' : detail.player.color }"
+                :style="{ backgroundColor: isStale(headerPlayer, now) ? '#94a3b8' : headerPlayer.color }"
                 aria-hidden="true"
             />
             <div class="min-w-0">
-                <h2 class="break-words text-xl font-bold leading-snug text-slate-900">{{ detail.player.nickname }}</h2>
+                <h2 class="break-words text-xl font-bold leading-snug text-slate-900">{{ headerPlayer.nickname }}</h2>
                 <p class="mt-0.5 text-sm text-slate-500">
-                    <template v-if="detail.player.finished_at">
+                    <template v-if="headerPlayer.finished_at">
                         <span class="font-semibold text-green-700">✓ dokončil(a)</span>
-                        v {{ formatTime(detail.player.finished_at) }}
+                        v {{ formatTime(headerPlayer.finished_at) }}
                     </template>
                     <template v-else>
-                        Stanoviště {{ progressLabel(detail.player) }} · naposledy {{ relativeTime(detail.player.last_seen_at, now) }}
+                        Stanoviště {{ progressLabel(headerPlayer) }} · naposledy {{ relativeTime(headerPlayer.last_seen_at, now) }}
                     </template>
                 </p>
             </div>

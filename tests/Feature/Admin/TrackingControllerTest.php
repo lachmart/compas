@@ -219,3 +219,11 @@ test('tracking exposes location names', function () {
         ->getJson(route('admin.games.players.show', [$this->game, $session]))
         ->assertJsonPath('attempts.0.location_name', 'Studánka');
 });
+
+test('tracking exposes the kids play url and game status for the empty state', function () {
+    $this->actingAs($this->owner)->get(route('admin.games.tracking', $this->game))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('play_url', route('play.show', $this->game->slug))
+            ->where('game.status', $this->game->status->value));
+});
