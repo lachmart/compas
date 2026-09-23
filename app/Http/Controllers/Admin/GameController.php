@@ -10,6 +10,7 @@ use App\Models\Game;
 use App\Models\LocationAttempt;
 use App\Support\SlugGenerator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -17,9 +18,33 @@ class GameController extends Controller
 {
     public function index(Request $request)
     {
-        return Inertia::render('Admin/Games/Index', [
-            'games' => $request->user()->games()->withCount('locations')->latest()->get(),
-        ]);
+        $activeSince = now()->subSeconds(120);
+
+        $games = $request->user()->games()
+            ->withCount([
+                'locations',
+                'playerSessions as players_count',
+                'playerSessions as active_players_count' => fn ($q) => $q
+                    ->whereNull('finished_at')->where('last_seen_at', '>=', $activeSince),
+                'playerSessions as finished_players_count' => fn ($q) => $q->whereNotNull('finished_at'),
+            ])
+            ->withMax('playerSessions as last_activity_at', 'last_seen_at')
+            ->with(['locations:id,game_id,lat,lng,order'])
+            ->latest()
+            ->get()
+            ->map(fn (Game $game) => [
+                ...$game->only(['id', 'name', 'slug', 'status', 'created_at', 'updated_at']),
+                'locations_count' => $game->locations_count,
+                'players_count' => $game->players_count,
+                'active_players_count' => $game->active_players_count,
+                'finished_players_count' => $game->finished_players_count,
+                'last_activity_at' => $game->last_activity_at
+                    ? Carbon::parse($game->last_activity_at)->toIso8601String()
+                    : null,
+                'route' => $game->locations->map(fn ($l) => [(float) $l->lat, (float) $l->lng])->values()->all(),
+            ]);
+
+        return Inertia::render('Admin/Games/Index', ['games' => $games]);
     }
 
     public function create()
