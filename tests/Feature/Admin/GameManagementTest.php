@@ -225,3 +225,14 @@ test('the games list query count does not grow with the number of games', functi
 
     expect($four)->toBe($one);
 });
+
+test('the edit page provides the play url and player count', function () {
+    $user = User::factory()->create();
+    $game = Game::factory()->create(['owner_id' => $user->id, 'slug' => 'lesni-hra']);
+    PlayerSession::factory()->count(2)->create(['game_id' => $game->id]);
+
+    $this->actingAs($user)->get(route('admin.games.edit', $game))
+        ->assertInertia(fn ($page) => $page
+            ->where('play_url', route('play.show', 'lesni-hra'))
+            ->where('players_count', 2));
+});

@@ -83,6 +83,8 @@ class GameController extends Controller
                 'images' => array_map($media, $location->images()),
                 'reference_image' => $location->referenceImage() ? $media($location->referenceImage()) : null,
             ])->values(),
+            'play_url' => route('play.show', $game->slug),
+            'players_count' => $game->playerSessions()->count(),
         ]);
     }
 
