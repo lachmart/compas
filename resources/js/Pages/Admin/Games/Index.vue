@@ -26,7 +26,7 @@ const confirmDelete = () => {
     });
 };
 
-const deleteMessage = computed(() => (pendingDelete.value ? `Smazat hru „${pendingDelete.value.name}"?` : ''));
+const deleteMessage = computed(() => (pendingDelete.value ? `Smazat hru \u201e${pendingDelete.value.name}\u201c?` : ''));
 </script>
 
 <template>
