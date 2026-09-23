@@ -135,6 +135,8 @@ test('tracking page does not have N+1 query for locations_count', function () {
         PlayerSession::factory()->create(['game_id' => $this->game->id])->pings()->create(['lat' => 50.0 + $i, 'lng' => 14.0]);
     }
 
+    // Measure query count for first request (1 player)
+    \DB::flushQueryLog();
     \DB::enableQueryLog();
     $this->actingAs($this->owner)->get(route('admin.games.tracking', $this->game));
     $first_load_count = count(\DB::getQueryLog());
@@ -145,16 +147,16 @@ test('tracking page does not have N+1 query for locations_count', function () {
         PlayerSession::factory()->create(['game_id' => $this->game->id])->pings()->create(['lat' => 50.0 + 1 + $i, 'lng' => 14.0]);
     }
 
-    // With N+1 query issue per player, adding 4 players would add ~4 queries (doubling total from ~5 to ~9+)
-    // With proper optimization, adding players should add minimal queries
+    // Measure query count for second request (5 players)
+    // With N+1 issue, each additional player adds a COUNT query, so 5 players would cost more than 1 player
+    // With the fix, query cost should be identical since locations_count is pre-loaded and shared
+    \DB::flushQueryLog();
     \DB::enableQueryLog();
     $this->actingAs($this->owner)->get(route('admin.games.tracking', $this->game));
     $second_load_count = count(\DB::getQueryLog());
     \DB::disableQueryLog();
 
-    // The growth should be sub-linear with the fix in place
-    // Without the fix, adding 4 players would add ~4 queries (doubling from ~5 to ~9)
-    // With the fix, growth should be minimal
-    // We check that it doesn't exceed 2x, which would still be better than linear N+1 scaling
-    expect($second_load_count)->toBeLessThanOrEqual($first_load_count * 2);
+    // The query counts should be equal: both requests should cost the same number of queries
+    // This proves locations_count doesn't add per-player COUNT queries
+    expect($second_load_count)->toBe($first_load_count);
 });

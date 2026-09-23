@@ -17,10 +17,8 @@ class TrackingController extends Controller
     {
         $this->authorize('view', $game);
 
-        // Load the count once and cache it
+        // Load the count once to be shared across all player sessions
         $game->loadCount('locations');
-        // Ensure the attribute is accessible by getting the count value
-        $locations_count_value = $game->locations_count;
 
         return Inertia::render('Admin/Games/Tracking', [
             'game' => ['id' => $game->id, 'name' => $game->name, 'slug' => $game->slug],
