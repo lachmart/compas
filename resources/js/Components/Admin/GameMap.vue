@@ -28,6 +28,12 @@ let locationLayer = null;
 let draftLayer = null;
 let resizeObserver = null;
 let isMounted = false;
+// Set on the first real user input on the map (drag, wheel, pinch, zoom
+// buttons, keyboard). Programmatic view changes also fire Leaflet's
+// movestart/zoomstart, so we listen to raw DOM input instead.
+let userInteracted = false;
+const USER_INPUT_EVENTS = ['pointerdown', 'wheel', 'keydown', 'touchstart'];
+const markInteracted = () => { userInteracted = true; };
 
 const scene = computed(() => mapScene({
     locations: props.locations,
@@ -140,7 +146,9 @@ const setInitialView = () => {
     // One-shot: centre on the device if it tells us where it is.
     navigator.geolocation?.getCurrentPosition(
         ({ coords }) => {
-            if (!isMounted || !map || props.locations.length) return;
+            // Don't yank the map away from where the dozor already is or is working.
+            if (!isMounted || !map || userInteracted) return;
+            if (props.locations.length || props.draft?.lat != null) return;
             map.setView([coords.latitude, coords.longitude], 16);
         },
         () => {},
@@ -161,6 +169,7 @@ onMounted(() => {
     draftLayer = L.layerGroup().addTo(map);
 
     map.on('click', onMapClick);
+    USER_INPUT_EVENTS.forEach((type) => mapEl.value.addEventListener(type, markInteracted, { passive: true }));
 
     setInitialView();
     redraw();
@@ -175,6 +184,7 @@ onBeforeUnmount(() => {
     isMounted = false;
     resizeObserver?.disconnect();
     resizeObserver = null;
+    USER_INPUT_EVENTS.forEach((type) => mapEl.value?.removeEventListener(type, markInteracted));
     map?.remove();
     map = null;
     locationLayer = null;

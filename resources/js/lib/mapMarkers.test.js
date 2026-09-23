@@ -82,3 +82,12 @@ describe('mapScene', () => {
         expect(mapScene({ locations: [] })).toEqual({ markers: [], route: [], draft: null });
     });
 });
+
+describe('mapScene in edit mode without a draft position', () => {
+    test.each([null, { lat: null, lng: null, arrival_radius_m: 30 }])('keeps the selected marker (draft %o)', (draft) => {
+        const scene = mapScene({ locations, selectedId: 11, mode: 'edit', draft });
+        expect(scene.markers.map((m) => [m.id, m.selected])).toEqual([[10, false], [11, true], [12, false]]);
+        expect(scene.route[1]).toEqual([50.1, 14.1]);
+        expect(scene.draft).toBeNull();
+    });
+});

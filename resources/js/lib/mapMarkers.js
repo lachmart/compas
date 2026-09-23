@@ -20,7 +20,8 @@ export function numberedIcon(L, number, { selected = false } = {}) {
 
 // What GameMap draws, as plain data (no Leaflet):
 // - markers: one per visible location, numbered by 1-based position; in
-//   `edit` mode the selected location is hidden (the draft replaces it).
+//   `edit` mode the selected location is hidden once the draft has a
+//   position (the draft marker replaces it).
 // - route: points in order; in `edit` mode the selected location follows
 //   the draft position so the line tracks the dragged marker.
 // - draft: the draft marker (number + position + radius) or null — only in
@@ -34,9 +35,10 @@ export function mapScene({ locations, selectedId = null, draft = null, mode = 'v
     const route = [];
 
     locations.forEach((location, index) => {
-        const replaced = mode === 'edit' && index === selectedIndex;
+        // Only replace the selected marker once the draft has a position.
+        const replaced = mode === 'edit' && hasDraftPos && index === selectedIndex;
 
-        if (replaced && hasDraftPos) {
+        if (replaced) {
             route.push([draft.lat, draft.lng]);
         } else {
             route.push([location.lat, location.lng]);
