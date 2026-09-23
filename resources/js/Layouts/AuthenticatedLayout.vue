@@ -22,10 +22,9 @@ const showingNavigationDropdown = ref(false);
                         <div class="flex">
                             <!-- Logo -->
                             <div class="flex shrink-0 items-center">
-                                <Link :href="route('admin.games.index')">
-                                    <ApplicationLogo
-                                        class="block h-9 w-auto fill-current text-gray-800"
-                                    />
+                                <Link :href="route('admin.games.index')" class="flex items-center gap-2">
+                                    <ApplicationLogo class="block h-9 w-9" />
+                                    <span class="text-lg font-bold tracking-tight text-teal-900">Kompas</span>
                                 </Link>
                             </div>
 

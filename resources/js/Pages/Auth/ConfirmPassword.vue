@@ -2,7 +2,7 @@
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
+import AuthButton from '@/Components/Auth/AuthButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 
@@ -20,6 +20,8 @@ const submit = () => {
 <template>
     <GuestLayout>
         <Head title="Potvrzení hesla" />
+
+        <h1 class="mb-4 text-2xl font-bold text-gray-900">Potvrzení hesla</h1>
 
         <div class="mb-4 text-sm text-gray-600">
             Toto je zabezpečená část aplikace. Než budete pokračovat, potvrďte prosím své heslo.
@@ -41,11 +43,7 @@ const submit = () => {
             </div>
 
             <div class="mt-4 flex justify-end">
-                <PrimaryButton
-                    class="ms-4"
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                > Potvrdit </PrimaryButton>
+                <AuthButton :processing="form.processing">Potvrdit</AuthButton>
             </div>
         </form>
     </GuestLayout>

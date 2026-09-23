@@ -2,7 +2,7 @@
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
+import AuthButton from '@/Components/Auth/AuthButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 
@@ -34,6 +34,8 @@ const submit = () => {
 <template>
     <GuestLayout>
         <Head title="Nové heslo" />
+
+        <h1 class="mb-4 text-2xl font-bold text-gray-900">Nové heslo</h1>
 
         <form @submit.prevent="submit">
             <div>
@@ -89,10 +91,7 @@ const submit = () => {
             </div>
 
             <div class="mt-4 flex items-center justify-end">
-                <PrimaryButton
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                > Nastavit nové heslo </PrimaryButton>
+                <AuthButton :processing="form.processing">Nastavit nové heslo</AuthButton>
             </div>
         </form>
     </GuestLayout>
