@@ -51,7 +51,10 @@ class PlayController extends Controller
             'last_seen_at' => now(),
         ]);
 
-        PlayerProgressed::dispatch($playerSession, 'joined');
+        // A Reverb outage must never fail a player request (Global
+        // Constraints, Plan C): report the broadcast failure but let the
+        // join succeed regardless.
+        rescue(fn () => PlayerProgressed::dispatch($playerSession, 'joined'));
 
         session(['player_session_id' => $playerSession->id]);
 

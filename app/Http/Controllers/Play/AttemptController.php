@@ -101,10 +101,14 @@ class AttemptController extends Controller
         $attempt->update(['status' => AttemptStatus::Completed, 'completed_at' => now()]);
         $playerSession->advance();
 
-        PlayerProgressed::dispatch(
+        // A Reverb outage must never fail a player request (Global
+        // Constraints, Plan C): the attempt/advance state above must persist
+        // even if the broadcast fails, so report the failure but never let
+        // it propagate.
+        rescue(fn () => PlayerProgressed::dispatch(
             $playerSession,
             $playerSession->isFinished() ? 'finished' : 'completed_location',
-        );
+        ));
     }
 
     private function ensureCurrentTarget(PlayerSession $playerSession, Location $location): void

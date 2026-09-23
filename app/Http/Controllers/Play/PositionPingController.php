@@ -17,7 +17,10 @@ class PositionPingController extends Controller
 
         $ping = $playerSession->pings()->create($request->validated());
 
-        PlayerPositionUpdated::dispatch($ping);
+        // A Reverb outage must never fail a player request (Global
+        // Constraints, Plan C): report the broadcast failure but let the
+        // ping succeed regardless.
+        rescue(fn () => PlayerPositionUpdated::dispatch($ping));
 
         return response()->noContent();
     }
