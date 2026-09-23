@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
@@ -26,10 +26,7 @@ const confirmDelete = () => {
     });
 };
 
-const deleteMessage = () => {
-    if (!pendingDelete.value) return '';
-    return 'Smazat hru „' + pendingDelete.value.name + '"?';
-};
+const deleteMessage = computed(() => (pendingDelete.value ? `Smazat hru „${pendingDelete.value.name}"?` : ''));
 </script>
 
 <template>
@@ -86,7 +83,7 @@ const deleteMessage = () => {
 
         <ConfirmDialog
             :show="pendingDelete !== null"
-            :message="deleteMessage()"
+            :message="deleteMessage"
             warning="Smažou se i všechna stanoviště, hráči a jejich fotky. Tato akce je nevratná."
             @confirm="confirmDelete"
             @cancel="pendingDelete = null"
