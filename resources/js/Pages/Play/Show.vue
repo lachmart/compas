@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import CompassScreen from '@/Components/Play/CompassScreen.vue';
 import MapScreen from '@/Components/Play/MapScreen.vue';
@@ -8,6 +8,7 @@ import PickImageTask from '@/Components/Play/PickImageTask.vue';
 import PhotoTask from '@/Components/Play/PhotoTask.vue';
 import RewardOverlay from '@/Components/Play/RewardOverlay.vue';
 import FinishScreen from '@/Components/Play/FinishScreen.vue';
+import { unlockAudio } from '@/lib/feedback';
 import { usePositionPings } from '@/lib/usePositionPings';
 
 const props = defineProps({
@@ -27,6 +28,30 @@ const showingReward = ref(false);
 // permission prompts were already started from the join screen's tap.
 const pingsEnabled = computed(() => !finished.value);
 usePositionPings(props.game.slug, pingsEnabled);
+
+// A player who reloads straight into the game never tapped the join button,
+// so unlock sound on their first touch anywhere (iOS gesture rule). Per the
+// HTML spec a touch's pointerdown doesn't count as user activation (its
+// pointerup/touchend does), so keep listening until an activating event.
+const UNLOCK_EVENTS = ['pointerdown', 'pointerup', 'touchend'];
+
+const unlockOnFirstTouch = (event) => {
+    unlockAudio();
+
+    if (event.type !== 'pointerdown' || event.pointerType === 'mouse') {
+        stopUnlockListeners();
+    }
+};
+
+const stopUnlockListeners = () => {
+    UNLOCK_EVENTS.forEach((type) => window.removeEventListener(type, unlockOnFirstTouch, true));
+};
+
+onMounted(() => {
+    UNLOCK_EVENTS.forEach((type) => window.addEventListener(type, unlockOnFirstTouch, true));
+});
+
+onUnmounted(stopUnlockListeners);
 
 const currentLocation = computed(() => props.locations[currentIndex.value] ?? null);
 
@@ -65,6 +90,8 @@ const onRewardDone = () => {
 };
 
 const toggleView = () => {
+    // A tap: unlock sound here too (iOS gesture rule), before anything else.
+    unlockAudio();
     viewMode.value = viewMode.value === 'compass' ? 'map' : 'compass';
 };
 </script>
@@ -78,7 +105,7 @@ const toggleView = () => {
          or locations removed mid-session so the player's index now overshoots).
          Reuse FinishScreen as a neutral terminal state rather than crashing on
          a null location prop. -->
-    <FinishScreen v-else-if="!currentLocation" :avatar="player.avatar" :stars="locations.length" />
+    <FinishScreen v-else-if="!currentLocation" :avatar="player.avatar" :celebrate="false" />
 
     <!-- Every in-game screen shares one frame so the HUD (animal + stars)
          stays on top of the compass, the map, tasks and the reward. -->

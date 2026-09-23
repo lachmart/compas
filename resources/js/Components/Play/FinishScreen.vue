@@ -2,12 +2,16 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import Confetti from '@/Components/Play/Confetti.vue';
 import { avatarEmoji } from '@/lib/avatars';
-import { celebrate } from '@/lib/feedback';
+// Aliased: `celebrate` is also a prop name.
+import { celebrate as playCelebration } from '@/lib/feedback';
 
 const props = defineProps({
     avatar: { type: String, default: null },
     // Number of stations in the game: one star each.
     stars: { type: Number, default: 0 },
+    // false = neutral terminal state (e.g. a game with no stations left):
+    // no confetti, no sound, no trophy, just the animal.
+    celebrate: { type: Boolean, default: true },
 });
 
 const TROPHY = '\u{1F3C6}';
@@ -21,7 +25,9 @@ const burst = ref(0);
 let interval = null;
 
 onMounted(() => {
-    celebrate();
+    if (!props.celebrate) return;
+
+    playCelebration();
     interval = setInterval(() => {
         burst.value += 1;
     }, CONFETTI_EVERY_MS);
@@ -32,6 +38,19 @@ onUnmounted(() => clearInterval(interval));
 
 <template>
     <div
+        v-if="!celebrate"
+        class="flex h-dvh w-full items-center justify-center bg-gradient-to-b from-teal-400 to-teal-700 px-4"
+    >
+        <div
+            class="flex h-28 w-28 items-center justify-center rounded-full bg-white text-7xl shadow-xl ring-8 ring-white/60"
+            aria-hidden="true"
+        >
+            {{ emoji }}
+        </div>
+    </div>
+
+    <div
+        v-else
         class="relative flex h-dvh w-full flex-col items-center justify-center gap-8 overflow-hidden bg-gradient-to-b from-amber-200 via-yellow-300 to-orange-400 px-4"
     >
         <div class="absolute top-1/4 h-80 w-80 rounded-full bg-white/50 blur-3xl" aria-hidden="true"></div>

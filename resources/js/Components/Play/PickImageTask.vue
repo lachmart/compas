@@ -1,7 +1,7 @@
 <script setup>
 import { onUnmounted, ref } from 'vue';
 import ErrorFlash from '@/Components/Play/ErrorFlash.vue';
-import { celebrate, playWrong } from '@/lib/feedback';
+import { playSuccess, playWrong, unlockAudio } from '@/lib/feedback';
 
 const props = defineProps({
     images: { type: Array, required: true },
@@ -34,6 +34,9 @@ const showWrong = (index) => {
 };
 
 const pick = async (index) => {
+    // Synchronously inside the tap (iOS gesture rule), before any await.
+    unlockAudio();
+
     if (submitting.value || correct.value !== null) return;
 
     submitting.value = true;
@@ -49,7 +52,8 @@ const pick = async (index) => {
 
         if (response.data.correct) {
             correct.value = index;
-            celebrate();
+            // Short sound only: the reward overlay that follows celebrates.
+            playSuccess();
             completeTimer = setTimeout(() => emit('completed', response.data.player), CORRECT_MS);
         } else {
             showWrong(index);
@@ -67,6 +71,9 @@ onUnmounted(() => {
     clearTimeout(wrongTimer);
     clearTimeout(completeTimer);
 });
+
+// Screen-reader label only ("Image 1", ...); nothing visible.
+const tileLabel = (index) => `Obr\u00e1zek ${index + 1}`;
 
 const tileClass = (index) => {
     if (correct.value === index) return 'ring-8 ring-green-500 scale-105';
@@ -87,6 +94,7 @@ const tileClass = (index) => {
                 v-for="(image, index) in images"
                 :key="index"
                 type="button"
+                :aria-label="tileLabel(index)"
                 :disabled="submitting || correct !== null"
                 @click="pick(index)"
                 class="relative aspect-square overflow-hidden rounded-3xl bg-white p-1.5 shadow-xl motion-safe:transition motion-safe:duration-150"

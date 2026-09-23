@@ -15,7 +15,7 @@ const props = defineProps({
 });
 const emit = defineEmits(['arrived']);
 
-const { position, heading, orientation, geoError, orientationSupported, requestPermissions, needsTap, enableCompass } = useSensors();
+const { position, heading, orientation, geoError, orientationSupported, requestPermissions, needsTap, compassDenied, enableCompass } = useSensors();
 requestPermissions();
 
 const hasArrivalError = ref(false);
@@ -196,9 +196,10 @@ onUnmounted(() => {
 
                 <CompassArrow v-else-if="hasHeading" :rotation="rotation" :dimmed="bearing === null" />
 
-                <!-- No heading yet. On iOS the compass must be switched on by a tap. -->
+                <!-- No heading yet. On iOS the compass must be switched on by a tap
+                     (withdrawn after a denied tap: the static icon below stays). -->
                 <button
-                    v-else-if="needsTap"
+                    v-else-if="needsTap && !compassDenied"
                     type="button"
                     @click="enableCompass"
                     aria-label="Zapnout kompas"

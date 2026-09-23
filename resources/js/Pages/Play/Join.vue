@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import { AVATARS } from '@/lib/avatars';
+import { unlockAudio } from '@/lib/feedback';
 import { requestOrientationPermission } from '@/lib/orientationPermission';
 
 const props = defineProps({
@@ -11,6 +12,8 @@ const props = defineProps({
 
 // The only text on the player side: filled in by an adult, optional.
 const NAME_PLACEHOLDER = 'Jm\u00e9no (vypln\u00ed dosp\u011bl\u00fd)';
+// Screen-reader label of the play button ("Play").
+const PLAY_LABEL = 'Hr\u00e1t';
 
 const form = useForm({ avatar: null, nickname: '' });
 
@@ -31,6 +34,9 @@ const pick = (key) => {
 };
 
 const play = () => {
+    // Unlock sound for the whole game inside this tap (iOS gesture rule).
+    unlockAudio();
+
     if (form.processing) return;
 
     if (!form.avatar) {
@@ -141,7 +147,7 @@ const play = () => {
             <button
                 type="submit"
                 :aria-disabled="!form.avatar || form.processing"
-                aria-label="&#9654;"
+                :aria-label="PLAY_LABEL"
                 class="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-b from-emerald-400 to-emerald-600 text-white shadow-xl shadow-emerald-700/30 ring-4 ring-white/70 transition duration-200 focus:outline-none focus-visible:ring-teal-500 active:scale-95"
                 :class="
                     form.avatar

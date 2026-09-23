@@ -1,7 +1,7 @@
 <script setup>
 import { onUnmounted, ref } from 'vue';
 import ErrorFlash from '@/Components/Play/ErrorFlash.vue';
-import { celebrate } from '@/lib/feedback';
+import { playSuccess, unlockAudio } from '@/lib/feedback';
 
 const props = defineProps({
     referenceImage: { type: String, required: true },
@@ -53,7 +53,8 @@ const onCapture = async (event) => {
         );
 
         uploaded.value = true;
-        celebrate();
+        // Short sound only: the reward overlay that follows celebrates.
+        playSuccess();
         doneTimer = setTimeout(() => emit('completed', response.data.player), DONE_MS);
     } catch (error) {
         console.error('Failed to upload photo', error);
@@ -110,6 +111,7 @@ onUnmounted(() => {
                 aria-label="Vyfotit"
                 class="flex h-24 w-24 cursor-pointer items-center justify-center rounded-full bg-orange-500 text-white shadow-xl ring-8 ring-white/60 active:scale-90 motion-safe:transition-transform"
                 :class="{ 'pointer-events-none opacity-80': submitting }"
+                @click="unlockAudio"
             >
                 <svg v-if="submitting" viewBox="0 0 24 24" class="h-12 w-12 motion-safe:animate-spin" fill="none" aria-hidden="true">
                     <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity="0.3" stroke-width="3" />
@@ -122,6 +124,17 @@ onUnmounted(() => {
                 </svg>
                 <input type="file" accept="image/*" :capture="capture" class="hidden" :disabled="submitting" @change="onCapture" />
             </label>
+
+            <!-- Accepted but without a preview (createObjectURL failed): just the tick. -->
+            <span
+                v-else
+                class="flex h-24 w-24 items-center justify-center rounded-full bg-green-500 text-white shadow-xl ring-8 ring-white/60 motion-safe:animate-pop"
+                aria-hidden="true"
+            >
+                <svg viewBox="0 0 24 24" class="h-14 w-14" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12.5 10 17.5 19.5 7" />
+                </svg>
+            </span>
         </div>
     </div>
 </template>
