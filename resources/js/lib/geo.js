@@ -31,11 +31,3 @@ export function bearingDegrees(lat1, lng1, lat2, lng2) {
 export function arrowRotationDegrees(bearing, heading) {
     return (bearing - heading + 360) % 360;
 }
-
-export function proximityColor(distance) {
-    if (distance < 20) return 'red';
-    if (distance < 50) return 'orange';
-    if (distance < 150) return 'yellow';
-
-    return 'blue';
-}

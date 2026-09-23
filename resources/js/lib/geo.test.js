@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { arrowRotationDegrees, bearingDegrees, distanceMeters, proximityColor } from './geo';
+import { arrowRotationDegrees, bearingDegrees, distanceMeters } from './geo';
 
 describe('distanceMeters', () => {
     test('returns ~0 for identical points', () => {
@@ -34,16 +34,5 @@ describe('arrowRotationDegrees', () => {
 
     test('wraps correctly around 360', () => {
         expect(arrowRotationDegrees(10, 350)).toBe(20);
-    });
-});
-
-describe('proximityColor', () => {
-    test.each([
-        [10, 'red'],
-        [30, 'orange'],
-        [100, 'yellow'],
-        [200, 'blue'],
-    ])('distance %i meters -> %s', (distance, expected) => {
-        expect(proximityColor(distance)).toBe(expected);
     });
 });

@@ -21,7 +21,9 @@ const playerMarkers = new Map();
 const CZ_CENTER = [49.8, 15.5];
 const FIT_OPTIONS = { padding: [60, 60], maxZoom: 17 };
 
-const iconFor = (player) => playerIcon(L, { avatar: player.avatar, color: player.color, stale: isStale(player, props.now) });
+const iconState = (player) => ({ avatar: player.avatar, color: player.color, stale: isStale(player, props.now) });
+const iconKey = ({ avatar, color, stale }) => `${avatar}|${color}|${stale}`;
+const iconFor = (player) => playerIcon(L, iconState(player));
 
 const syncPlayers = () => {
     if (!map) return;
@@ -37,11 +39,19 @@ const syncPlayers = () => {
                 .addTo(map)
                 .on('click', () => emit('select', player.id));
             marker.bindTooltip('', { permanent: true, direction: 'top', offset: [0, -18] });
+            marker.kompasIconKey = iconKey(iconState(player));
             playerMarkers.set(player.id, marker);
         }
 
         marker.setLatLng(latLng);
-        marker.setIcon(iconFor(player));
+
+        // setIcon rebuilds the marker's DOM; only do it when the look changed
+        // (every tick would otherwise re-create all markers).
+        const key = iconKey(iconState(player));
+        if (marker.kompasIconKey !== key) {
+            marker.setIcon(iconFor(player));
+            marker.kompasIconKey = key;
+        }
 
         // Spec §6: a stale marker shows "naposledy viděn v HH:MM".
         const tooltip = isStale(player, props.now)
