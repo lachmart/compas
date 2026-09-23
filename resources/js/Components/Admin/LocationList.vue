@@ -14,6 +14,7 @@ const editingId = ref(null);
 const isAdding = ref(false);
 const draggedId = ref(null);
 const pendingDelete = ref(null); // { location, position }
+const deleting = ref(false);
 
 const formOpen = computed(() => editingId.value !== null || isAdding.value);
 
@@ -24,9 +25,14 @@ const deleteWarning = computed(() =>
 );
 
 const onDragStart = (location) => { draggedId.value = location.id; };
+const onDragEnd = () => { draggedId.value = null; };
 const onDrop = (targetLocation) => {
     const ids = props.locations.map((l) => l.id);
     const from = ids.indexOf(draggedId.value);
+    draggedId.value = null;
+
+    if (formOpen.value || from === -1) return;
+
     const to = ids.indexOf(targetLocation.id);
     ids.splice(to, 0, ids.splice(from, 1)[0]);
 
@@ -52,10 +58,14 @@ const confirmDelete = () => {
     const { location } = pendingDelete.value;
     if (editingId.value === location.id) closeForm();
 
+    deleting.value = true;
     router.delete(route('admin.games.locations.destroy', [props.game.id, location.id]), {
         preserveScroll: true,
-        onFinish: () => {
+        onSuccess: () => {
             pendingDelete.value = null;
+        },
+        onFinish: () => {
+            deleting.value = false;
         },
     });
 };
@@ -69,8 +79,9 @@ const confirmDelete = () => {
                 :key="location.id"
                 :draggable="!formOpen"
                 @dragstart="onDragStart(location)"
+                @dragend="onDragEnd"
                 @dragover.prevent
-                @drop="onDrop(location)"
+                @drop.prevent="onDrop(location)"
             >
                 <div
                     class="flex items-center justify-between gap-4 p-3"
@@ -119,6 +130,7 @@ const confirmDelete = () => {
             :show="pendingDelete !== null"
             :message="pendingDelete ? `Smazat stanoviště ${locationLabel(pendingDelete.location, pendingDelete.position)}? Tato akce je nevratná.` : ''"
             :warning="deleteWarning"
+            :processing="deleting"
             @confirm="confirmDelete"
             @cancel="pendingDelete = null"
         />

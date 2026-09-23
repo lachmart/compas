@@ -8,6 +8,7 @@ defineProps({
     message: { type: String, required: true },
     warning: { type: String, default: null },
     confirmLabel: { type: String, default: 'Smazat' },
+    processing: { type: Boolean, default: false },
 });
 const emit = defineEmits(['confirm', 'cancel']);
 </script>
@@ -19,7 +20,7 @@ const emit = defineEmits(['confirm', 'cancel']);
             <p v-if="warning" class="rounded bg-amber-50 p-3 text-sm text-amber-800">{{ warning }}</p>
             <div class="flex justify-end gap-3">
                 <SecondaryButton type="button" @click="emit('cancel')">Zrušit</SecondaryButton>
-                <DangerButton type="button" @click="emit('confirm')">{{ confirmLabel }}</DangerButton>
+                <DangerButton type="button" :disabled="processing" @click="emit('confirm')">{{ confirmLabel }}</DangerButton>
             </div>
         </div>
     </Modal>

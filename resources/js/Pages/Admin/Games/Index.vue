@@ -11,6 +11,7 @@ defineProps({
 const STATUS_LABELS = { draft: 'koncept', published: 'publikováno', archived: 'archivováno' };
 
 const pendingDelete = ref(null);
+const deleting = ref(false);
 
 const togglePublish = (game) => {
     const routeName = game.status === 'published' ? 'admin.games.unpublish' : 'admin.games.publish';
@@ -18,10 +19,14 @@ const togglePublish = (game) => {
 };
 
 const confirmDelete = () => {
+    deleting.value = true;
     router.delete(route('admin.games.destroy', pendingDelete.value.id), {
         preserveScroll: true,
-        onFinish: () => {
+        onSuccess: () => {
             pendingDelete.value = null;
+        },
+        onFinish: () => {
+            deleting.value = false;
         },
     });
 };
@@ -85,6 +90,7 @@ const deleteMessage = computed(() => (pendingDelete.value ? `Smazat hru \u201e${
             :show="pendingDelete !== null"
             :message="deleteMessage"
             warning="Smažou se i všechna stanoviště, hráči a jejich fotky. Tato akce je nevratná."
+            :processing="deleting"
             @confirm="confirmDelete"
             @cancel="pendingDelete = null"
         />
