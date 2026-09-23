@@ -3,20 +3,24 @@ import { computed } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import MapPicker from '@/Components/Admin/MapPicker.vue';
 import TaskContentFields from '@/Components/Admin/TaskContentFields.vue';
+import { TASK_TYPE_LABELS } from '@/lib/taskTypes';
 
 const props = defineProps({
     game: Object,
     location: { type: Object, default: null },
+    heading: { type: String, default: null },
 });
 const emit = defineEmits(['saved', 'cancel']);
 
 const form = useForm({
+    name: props.location?.name ?? '',
     lat: props.location?.lat ?? null,
     lng: props.location?.lng ?? null,
     arrival_radius_m: props.location?.arrival_radius_m ?? 15,
     task_type: props.location?.task_type ?? 'arrival_only',
+    existing_images: (props.location?.images ?? []).map((image) => image.path),
     images: [],
-    correct_index: props.location?.correct_index ?? 0,
+    correct_index: props.location?.correct_index ?? null,
     reference_image: null,
 });
 
@@ -44,6 +48,14 @@ const submit = () => {
 
 <template>
     <form @submit.prevent="submit" class="space-y-4 rounded border p-4">
+        <h4 v-if="heading" class="font-semibold text-indigo-900">{{ heading }}</h4>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Název stanoviště (nepovinné, dítě ho neuvidí)</label>
+            <input v-model="form.name" type="text" maxlength="100" class="mt-1 block w-full rounded border-gray-300" />
+            <p v-if="form.errors.name" class="text-sm text-red-600">{{ form.errors.name }}</p>
+        </div>
+
         <MapPicker v-model="position" />
         <p v-if="form.errors.lat" class="text-sm text-red-600">{{ form.errors.lat }}</p>
         <p v-if="form.errors.lng" class="text-sm text-red-600">{{ form.errors.lng }}</p>
@@ -57,15 +69,12 @@ const submit = () => {
         <div>
             <label class="block text-sm font-medium text-gray-700">Typ úkolu</label>
             <select v-model="form.task_type" class="mt-1 block w-full rounded border-gray-300">
-                <option value="arrival_only">Jen dojít</option>
-                <option value="pick_image">Vybrat obrázek</option>
-                <option value="photo_of_something">Vyfotit něco</option>
-                <option value="selfie_doing_something">Vyfotit se při činnosti</option>
+                <option v-for="(label, value) in TASK_TYPE_LABELS" :key="value" :value="value">{{ label }}</option>
             </select>
             <p v-if="form.errors.task_type" class="text-sm text-red-600">{{ form.errors.task_type }}</p>
         </div>
 
-        <TaskContentFields :task-type="form.task_type" :form="form" />
+        <TaskContentFields :task-type="form.task_type" :form="form" :location="location" />
 
         <div class="flex gap-2">
             <button type="submit" :disabled="form.processing" class="rounded bg-indigo-600 px-4 py-2 text-white">
