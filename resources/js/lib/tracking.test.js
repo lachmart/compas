@@ -13,6 +13,7 @@ const player = (overrides = {}) => ({
     id: 1,
     nickname: 'Anna',
     color: '#e6194b',
+    avatar: 'owl',
     current_location_index: 2,
     locations_count: 8,
     finished_at: null,
@@ -84,11 +85,15 @@ describe('applyProgress', () => {
 });
 
 describe('progressMessage', () => {
-    it('describes each kind of progress in Czech', () => {
-        expect(progressMessage({ kind: 'joined', player: player() })).toBe('Anna se připojil(a) ke hře');
+    it('describes each kind of progress in Czech, prefixed by the animal emoji', () => {
+        expect(progressMessage({ kind: 'joined', player: player() })).toBe('🦉 Anna se připojil(a) ke hře');
         expect(progressMessage({ kind: 'completed_location', player: player({ current_location_index: 3 }) }))
-            .toBe('Anna splnil(a) stanoviště 3/8');
-        expect(progressMessage({ kind: 'finished', player: player() })).toBe('Anna dokončil(a) hru 🎉');
+            .toBe('🦉 Anna splnil(a) stanoviště 3/8');
+        expect(progressMessage({ kind: 'finished', player: player() })).toBe('🦉 Anna dokončil(a) hru 🎉');
+    });
+
+    it('falls back to a neutral emoji when the avatar is unknown', () => {
+        expect(progressMessage({ kind: 'joined', player: player({ avatar: null }) })).toBe('🙂 Anna se připojil(a) ke hře');
     });
 });
 

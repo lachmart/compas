@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import Badge from '@/Components/UI/Badge.vue';
+import { avatarEmoji } from '@/lib/avatars';
 import { relativeTime } from '@/lib/format';
 import { isStale } from '@/lib/tracking';
 
@@ -42,7 +43,7 @@ const percent = computed(() => {
             <span
                 class="min-w-0 flex-1 truncate font-semibold"
                 :class="stale ? 'text-slate-500' : 'text-slate-900'"
-            >{{ player.nickname }}</span>
+            >{{ avatarEmoji(player.avatar) }} {{ player.nickname }}</span>
             <Badge v-if="stale" tone="amber" class="shrink-0">bez signálu</Badge>
             <span v-else-if="finished" class="shrink-0 text-xs font-semibold text-green-700">✓ dokončil(a)</span>
             <span v-else class="shrink-0 text-xs font-medium tabular-nums text-slate-500">

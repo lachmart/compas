@@ -1,3 +1,5 @@
+import { avatarEmoji } from './avatars';
+
 export const STALE_AFTER_MS = 120000;
 
 export function isStale(player, nowMs) {
@@ -51,10 +53,12 @@ export function diffProgress(previous, next) {
 }
 
 export function progressMessage({ kind, player }) {
-    if (kind === 'joined') return `${player.nickname} se připojil(a) ke hře`;
-    if (kind === 'finished') return `${player.nickname} dokončil(a) hru 🎉`;
+    const emoji = avatarEmoji(player.avatar);
 
-    return `${player.nickname} splnil(a) stanoviště ${player.current_location_index}/${player.locations_count}`;
+    if (kind === 'joined') return `${emoji} ${player.nickname} se připojil(a) ke hře`;
+    if (kind === 'finished') return `${emoji} ${player.nickname} dokončil(a) hru 🎉`;
+
+    return `${emoji} ${player.nickname} splnil(a) stanoviště ${player.current_location_index}/${player.locations_count}`;
 }
 
 export function formatTime(iso) {

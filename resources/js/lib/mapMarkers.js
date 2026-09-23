@@ -1,3 +1,5 @@
+import { avatarEmoji } from './avatars';
+
 export const TEAL = '#0d9488'; // teal-600
 export const ORANGE = '#f97316'; // orange-500
 
@@ -15,6 +17,21 @@ export function numberedIcon(L, number, { selected = false } = {}) {
         html: `<div style="background:${bg};width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:9999px;border:2px solid #fff;color:#fff;font-size:14px;font-weight:700;line-height:1;box-shadow:0 2px 6px rgba(0,0,0,.3);box-sizing:border-box">${label}</div>`,
         iconSize: [30, 30],
         iconAnchor: [15, 15],
+    });
+}
+
+// Round player marker: the animal emoji on a white disc, ringed in the
+// player's colour (grey when stale). The HTML only ever contains an emoji
+// looked up from the fixed avatar list — never the player's nickname.
+export function playerIcon(L, { avatar, color, stale = false }) {
+    const emoji = avatarEmoji(avatar);
+    const ring = stale ? '#9ca3af' : color;
+
+    return L.divIcon({
+        className: '',
+        html: `<div style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:9999px;background:#fff;border:3px solid ${ring};font-size:18px;line-height:1;opacity:${stale ? 0.75 : 1};box-shadow:0 2px 6px rgba(0,0,0,.35);box-sizing:border-box">${emoji}</div>`,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
     });
 }
 

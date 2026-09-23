@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import TaskTypeIcon from '@/Components/Admin/TaskTypeIcon.vue';
 import Button from '@/Components/UI/Button.vue';
 import Spinner from '@/Components/UI/Spinner.vue';
+import { avatarEmoji } from '@/lib/avatars';
 import { relativeTime } from '@/lib/format';
 import { taskTypeLabel } from '@/lib/taskTypes';
 import { formatTime, isStale, progressLabel } from '@/lib/tracking';
@@ -80,7 +81,9 @@ watch(() => [props.playerId, props.version], load, { immediate: true });
                 aria-hidden="true"
             />
             <div class="min-w-0">
-                <h2 class="break-words text-xl font-bold leading-snug text-slate-900">{{ headerPlayer.nickname }}</h2>
+                <h2 class="break-words text-xl font-bold leading-snug text-slate-900">
+                    {{ avatarEmoji(headerPlayer.avatar) }} {{ headerPlayer.nickname }}
+                </h2>
                 <p class="mt-0.5 text-sm text-slate-500">
                     <template v-if="headerPlayer.finished_at">
                         <span class="font-semibold text-green-700">✓ dokončil(a)</span>

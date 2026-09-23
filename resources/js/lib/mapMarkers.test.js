@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { mapScene, numberedIcon, ORANGE, TEAL } from './mapMarkers';
+import { mapScene, numberedIcon, playerIcon, ORANGE, TEAL } from './mapMarkers';
 
 const fakeL = { divIcon: (options) => options };
 
@@ -20,6 +20,31 @@ describe('numberedIcon', () => {
         const html = numberedIcon(fakeL, '<img src=x onerror=alert(1)>').html;
         expect(html).not.toContain('<img');
         expect(numberedIcon(fakeL, '7<b>x</b>').html).toContain('>7</div>');
+    });
+});
+
+describe('playerIcon', () => {
+    test('shows the animal emoji ringed in the player colour', () => {
+        const icon = playerIcon(fakeL, { avatar: 'owl', color: '#e6194b' });
+        expect(icon.html).toContain('\u{1F989}');
+        expect(icon.html).toContain('#e6194b');
+        expect(icon.iconSize).toEqual([34, 34]);
+        expect(icon.iconAnchor).toEqual([17, 17]);
+    });
+
+    test('rings a stale player in grey instead of their colour', () => {
+        const icon = playerIcon(fakeL, { avatar: 'owl', color: '#e6194b', stale: true });
+        expect(icon.html).toContain('#9ca3af');
+        expect(icon.html).not.toContain('#e6194b');
+    });
+
+    test('falls back to a neutral emoji for an unknown avatar', () => {
+        expect(playerIcon(fakeL, { avatar: 'unknown', color: '#000' }).html).toContain('\u{1F642}');
+    });
+
+    test('never lets markup through via the avatar key', () => {
+        const html = playerIcon(fakeL, { avatar: '<img src=x onerror=alert(1)>', color: '#000' }).html;
+        expect(html).not.toContain('<img');
     });
 });
 

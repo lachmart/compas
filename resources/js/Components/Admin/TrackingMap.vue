@@ -2,7 +2,8 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { numberedIcon, TEAL } from '@/lib/mapMarkers';
+import { avatarEmoji } from '@/lib/avatars';
+import { numberedIcon, playerIcon, TEAL } from '@/lib/mapMarkers';
 import { formatTime, isStale, progressLabel } from '@/lib/tracking';
 
 const props = defineProps({
@@ -20,17 +21,7 @@ const playerMarkers = new Map();
 const CZ_CENTER = [49.8, 15.5];
 const FIT_OPTIONS = { padding: [60, 60], maxZoom: 17 };
 
-const styleFor = (player) => {
-    const stale = isStale(player, props.now);
-
-    return {
-        radius: 9,
-        color: stale ? '#9ca3af' : player.color,
-        fillColor: stale ? '#d1d5db' : player.color,
-        fillOpacity: stale ? 0.5 : 0.9,
-        weight: 2,
-    };
-};
+const iconFor = (player) => playerIcon(L, { avatar: player.avatar, color: player.color, stale: isStale(player, props.now) });
 
 const syncPlayers = () => {
     if (!map) return;
@@ -42,20 +33,20 @@ const syncPlayers = () => {
         let marker = playerMarkers.get(player.id);
 
         if (!marker) {
-            marker = L.circleMarker(latLng, styleFor(player))
+            marker = L.marker(latLng, { icon: iconFor(player), keyboard: false })
                 .addTo(map)
                 .on('click', () => emit('select', player.id));
-            marker.bindTooltip('', { permanent: true, direction: 'top', offset: [0, -8] });
+            marker.bindTooltip('', { permanent: true, direction: 'top', offset: [0, -18] });
             playerMarkers.set(player.id, marker);
         }
 
         marker.setLatLng(latLng);
-        marker.setStyle(styleFor(player));
+        marker.setIcon(iconFor(player));
 
         // Spec §6: a stale marker shows "naposledy viděn v HH:MM".
         const tooltip = isStale(player, props.now)
-            ? `${player.nickname} · ${progressLabel(player)} · naposledy viděn v ${formatTime(player.last_seen_at)}`
-            : `${player.nickname} · ${progressLabel(player)}`;
+            ? `${avatarEmoji(player.avatar)} ${player.nickname} · ${progressLabel(player)} · naposledy viděn v ${formatTime(player.last_seen_at)}`
+            : `${avatarEmoji(player.avatar)} ${player.nickname} · ${progressLabel(player)}`;
         // Pass DOM text node to Leaflet; strings are parsed as HTML, so user-controlled content must use createTextNode to prevent XSS.
         marker.setTooltipContent(document.createTextNode(tooltip));
     });
