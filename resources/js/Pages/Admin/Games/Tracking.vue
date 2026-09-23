@@ -18,8 +18,10 @@ const now = ref(Date.now());
 const selectedPlayerId = ref(null);
 const detailVersion = ref(0);
 const toasts = ref([]);
+const echoUnavailable = ref(false);
 let toastId = 0;
 let nowTimer = null;
+let echo = null;
 
 const channelName = `games.${props.game.id}.tracking`;
 
@@ -36,7 +38,15 @@ onMounted(() => {
         now.value = Date.now();
     }, 15000);
 
-    getEcho()
+    echo = getEcho();
+
+    if (!echo) {
+        echoUnavailable.value = true;
+
+        return;
+    }
+
+    echo
         .private(channelName)
         .listen('.player.position', (payload) => {
             livePlayers.value = applyPosition(livePlayers.value, payload);
@@ -50,7 +60,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
     clearInterval(nowTimer);
-    getEcho().leave(channelName);
+    if (echo) echo.leave(channelName);
 });
 </script>
 
@@ -64,6 +74,12 @@ onBeforeUnmount(() => {
                 <Link :href="route('admin.games.edit', game.id)" class="text-sm text-indigo-600">← Zpět na úpravu hry</Link>
             </div>
         </template>
+
+        <div class="mx-auto max-w-7xl px-4 pt-4">
+            <p v-if="echoUnavailable" class="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+                Živé sledování není dostupné (Reverb není nakonfigurovaný) — data se aktualizují jen po obnovení stránky.
+            </p>
+        </div>
 
         <div class="mx-auto grid max-w-7xl gap-4 p-4 lg:grid-cols-[1fr_22rem]">
             <div class="h-[70vh] overflow-hidden rounded-lg bg-white shadow-sm">

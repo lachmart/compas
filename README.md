@@ -41,6 +41,27 @@ php artisan boost:install
 
 Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
 
+## Živé sledování (Reverb)
+
+Sledování hráčů na dozorské stránce (`/admin/games/{game}/tracking`) běží přes
+[Laravel Reverb](https://reverb.laravel.com) (WebSocket broadcasting). Po
+`cp .env.example .env` jsou `REVERB_APP_*` prázdné — broadcast eventy se v
+tom stavu bezpečně přeskočí (hráčské requesty nikdy nespadnou kvůli výpadku
+Reverbu) a dozorská stránka zobrazí hlášku, že živé sledování není dostupné.
+
+Aby sledování fungovalo naživo:
+
+1. Vygeneruj klíče: `php artisan reverb:install` (doplní `REVERB_APP_*` do
+   `.env`).
+2. Lokálně: `composer run dev` nastartuje dev server, queue listener i
+   Reverb server najednou (viz `composer.json` skript `dev`).
+3. Produkce: potřebuje samostatně běžící a supervidované
+   `php artisan queue:work` (broadcast eventy jsou frontované, ne
+   `ShouldBroadcastNow`) a `php artisan reverb:start`, typicky za TLS
+   proxy (nginx/Caddy) kvůli `wss://`.
+4. `VITE_REVERB_*` proměnné se zapékají do JS bundlu v době
+   `npm run build` — po jejich změně je potřeba build spustit znovu.
+
 ## Contributing
 
 Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).

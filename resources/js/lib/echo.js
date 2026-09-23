@@ -5,8 +5,17 @@ let instance = null;
 
 // Created lazily so only the dozor's tracking page opens a WebSocket —
 // players' phones never need one.
+//
+// Returns null when Reverb isn't configured (e.g. a fresh checkout with
+// empty REVERB_APP_* / VITE_REVERB_APP_KEY) instead of throwing — pusher-js
+// requires a non-empty key to construct a client. Callers must handle a
+// null return by skipping subscribe/leave.
 export function getEcho() {
     if (instance) return instance;
+
+    if (!import.meta.env.VITE_REVERB_APP_KEY) {
+        return null;
+    }
 
     window.Pusher = Pusher;
     instance = new Echo({
