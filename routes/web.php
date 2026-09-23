@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\GameController;
 use App\Http\Controllers\Admin\LocationController;
+use App\Http\Controllers\Admin\TrackingController;
 use App\Http\Controllers\Play\AttemptController;
 use App\Http\Controllers\Play\PlayController;
 use App\Http\Controllers\Play\PositionPingController;
@@ -42,9 +43,13 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::post('games/{game}/locations', [LocationController::class, 'store'])->name('games.locations.store');
     Route::patch('games/{game}/locations/reorder', [LocationController::class, 'reorder'])->name('games.locations.reorder');
 
+    Route::get('games/{game}/tracking', [TrackingController::class, 'show'])->name('games.tracking');
+
     Route::scopeBindings()->group(function () {
         Route::put('games/{game}/locations/{location}', [LocationController::class, 'update'])->name('games.locations.update');
         Route::delete('games/{game}/locations/{location}', [LocationController::class, 'destroy'])->name('games.locations.destroy');
+        Route::get('games/{game}/players/{playerSession}', [TrackingController::class, 'player'])->name('games.players.show');
+        Route::patch('games/{game}/players/{playerSession}/attempts/{attempt}/flag', [TrackingController::class, 'flag'])->name('games.players.attempts.flag');
     });
 });
 
