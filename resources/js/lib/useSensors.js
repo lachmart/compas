@@ -62,6 +62,10 @@ export function useSensors() {
                 const result = await OrientationEvent.requestPermission();
 
                 if (result === 'granted') {
+                    // Chrome now also exposes requestPermission (unlike Safari,
+                    // which only ever fires plain deviceorientation), so we
+                    // register both here too to get absolute heading there.
+                    window.addEventListener('deviceorientationabsolute', handleOrientation);
                     window.addEventListener('deviceorientation', handleOrientation);
                 } else {
                     orientationSupported.value = false;

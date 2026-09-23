@@ -18,6 +18,7 @@ watch(
             navigator.vibrate?.(150);
         }
     },
+    { immediate: true },
 );
 </script>
 
