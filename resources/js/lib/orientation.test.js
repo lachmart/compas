@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
     BEHIND_DEG,
     ON_COURSE_DEG,
+    ON_COURSE_EXIT_DEG,
     UPRIGHT_ENTER_DEG,
     UPRIGHT_EXIT_DEG,
     absoluteOrientation,
@@ -36,6 +37,14 @@ describe('cameraHeading', () => {
 
     test('gamma turns the camera direction when upright', () => {
         expect(cameraHeading(0, 90, 30)).toBeCloseTo(330, 5);
+    });
+
+    test('realistic forward tilt facing north', () => {
+        expect(cameraHeading(0, 60, 0)).toBeCloseTo(0, 5);
+    });
+
+    test('alpha/gamma split at vertical only their sum matters', () => {
+        expect(cameraHeading(20, 90, -20)).toBeCloseTo(0, 5);
     });
 
     test('always returns a value in [0, 360)', () => {
@@ -80,6 +89,14 @@ describe('nextPosture', () => {
         expect(nextPosture('flat', 45, 0)).toBe('flat');
         expect(nextPosture('upright', 45, 0)).toBe('upright');
     });
+
+    // Exact UPRIGHT_ENTER_DEG (55) is flaky: tiltDegrees(55, 0) round-trips
+    // through cos/acos to 55.00000000000001, which is > 55 and would flip
+    // posture. Using 54.9/35.1 keeps the assertion meaningful and stable.
+    test('near-exact thresholds keep the current posture', () => {
+        expect(nextPosture('flat', 54.9, 0)).toBe('flat');
+        expect(nextPosture('upright', 35.1, 0)).toBe('upright');
+    });
 });
 
 describe('turnGuidance', () => {
@@ -108,10 +125,44 @@ describe('turnGuidance', () => {
         expect(turnGuidance(0, BEHIND_DEG - 1)).toBe('left');
     });
 
+    test('exactly 135 is still a turn, not behind', () => {
+        expect(turnGuidance(0, BEHIND_DEG)).toBe('left');
+        expect(turnGuidance(0, 360 - BEHIND_DEG)).toBe('right');
+    });
+
     test('wraps around north', () => {
         expect(turnGuidance(350, 40)).toBe('left');
         expect(turnGuidance(40, 350)).toBe('right');
         expect(turnGuidance(355, 5)).toBe('on_course');
+    });
+
+    describe('hysteresis on the on-course exit', () => {
+        test('a 25 degree diff stays on course when already on course', () => {
+            expect(turnGuidance(25, 0, 'on_course')).toBe('on_course');
+            expect(turnGuidance(0, 25, 'on_course')).toBe('on_course');
+        });
+
+        test('a 29 degree diff leaves on course', () => {
+            expect(turnGuidance(29, 0, 'on_course')).toBe('right');
+            expect(turnGuidance(0, 29, 'on_course')).toBe('left');
+        });
+
+        test('a 25 degree diff is a turn (not on course) from left, right, or no previous', () => {
+            expect(turnGuidance(25, 0, 'left')).toBe('right');
+            expect(turnGuidance(25, 0, 'right')).toBe('right');
+            expect(turnGuidance(25, 0, null)).toBe('right');
+            expect(turnGuidance(25, 0)).toBe('right');
+        });
+
+        test('exactly ON_COURSE_DEG (20) enters on course regardless of previous', () => {
+            expect(turnGuidance(ON_COURSE_DEG, 0, null)).toBe('on_course');
+            expect(turnGuidance(ON_COURSE_DEG, 0, 'left')).toBe('on_course');
+        });
+
+        test('exactly ON_COURSE_EXIT_DEG (28) still stays on course, 29 leaves', () => {
+            expect(turnGuidance(ON_COURSE_EXIT_DEG, 0, 'on_course')).toBe('on_course');
+            expect(turnGuidance(ON_COURSE_EXIT_DEG + 1, 0, 'on_course')).toBe('right');
+        });
     });
 });
 

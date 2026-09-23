@@ -5,6 +5,7 @@
 export const UPRIGHT_ENTER_DEG = 55;
 export const UPRIGHT_EXIT_DEG = 35;
 export const ON_COURSE_DEG = 20;
+export const ON_COURSE_EXIT_DEG = 28;
 export const BEHIND_DEG = 135;
 
 const RAD = Math.PI / 180;
@@ -43,11 +44,16 @@ export function nextPosture(previous, beta, gamma) {
 }
 
 // bearing: direction to the target; heading: direction the camera faces.
-export function turnGuidance(bearing, heading) {
+// previous: the last guidance value, used for hysteresis so that hovering
+// right at the on-course edge doesn't flicker between 'on_course' and a
+// turn direction on every reading.
+export function turnGuidance(bearing, heading, previous = null) {
     let diff = normalize360(bearing - heading);
     if (diff > 180) diff -= 360;
 
-    if (Math.abs(diff) <= ON_COURSE_DEG) return 'on_course';
+    const tolerance = previous === 'on_course' ? ON_COURSE_EXIT_DEG : ON_COURSE_DEG;
+
+    if (Math.abs(diff) <= tolerance) return 'on_course';
     if (Math.abs(diff) > BEHIND_DEG) return 'behind';
 
     return diff > 0 ? 'right' : 'left';

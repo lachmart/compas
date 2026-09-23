@@ -45,12 +45,20 @@ watch(orientation, (value) => {
     if (value) posture.value = nextPosture(posture.value, value.beta, value.gamma);
 });
 
-const guidance = computed(() => {
-    if (posture.value !== 'upright' || !orientation.value || bearing.value === null) return null;
+// A ref (not a computed) so its own previous value can feed back into
+// turnGuidance() for on-course hysteresis (see orientation.js). watch()
+// with an explicit source list avoids a self-triggering effect.
+const guidance = ref(null);
+
+watch([posture, orientation, bearing], () => {
+    if (posture.value !== 'upright' || !orientation.value || bearing.value === null) {
+        guidance.value = null;
+        return;
+    }
 
     const { alpha, beta, gamma } = orientation.value;
 
-    return turnGuidance(bearing.value, cameraHeading(alpha, beta, gamma));
+    guidance.value = turnGuidance(bearing.value, cameraHeading(alpha, beta, gamma), guidance.value);
 });
 
 const backgroundColor = computed(() => {
