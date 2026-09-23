@@ -77,6 +77,9 @@ const gamesLinkClasses = (active) =>
 
                     <div class="-me-2 flex items-center sm:hidden">
                         <button
+                            type="button"
+                            aria-label="Menu"
+                            :aria-expanded="showingNavigationDropdown"
                             @click="showingNavigationDropdown = !showingNavigationDropdown"
                             class="inline-flex items-center justify-center rounded-md p-2 text-slate-400 transition duration-150 ease-in-out hover:bg-slate-100 hover:text-slate-500 focus:bg-slate-100 focus:text-slate-500 focus:outline-none"
                         >
@@ -145,10 +148,10 @@ const gamesLinkClasses = (active) =>
                 v-if="$slots.breadcrumb || $slots.tabs"
                 class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8"
             >
-                <div v-if="$slots.breadcrumb" class="flex items-center gap-2 text-sm text-slate-500">
+                <div v-if="$slots.breadcrumb" class="flex min-w-0 flex-1 items-center gap-2 text-sm text-slate-500">
                     <slot name="breadcrumb" />
                 </div>
-                <div v-if="$slots.tabs" class="flex items-center">
+                <div v-if="$slots.tabs" class="flex shrink-0 items-center">
                     <slot name="tabs" />
                 </div>
             </div>

@@ -12,6 +12,7 @@ defineProps({
             v-for="tab in tabs"
             :key="tab.label"
             :href="tab.href"
+            :aria-current="tab.active ? 'page' : undefined"
             class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
             :class="tab.active ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
         >

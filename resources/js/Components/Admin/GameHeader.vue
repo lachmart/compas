@@ -61,9 +61,10 @@ const togglePublish = () => {
                 role="switch"
                 aria-labelledby="publish-label"
                 :aria-checked="isPublished"
-                :disabled="cannotPublish || toggling"
+                :disabled="cannotPublish"
+                :aria-disabled="toggling ? 'true' : undefined"
                 :title="cannotPublish ? 'Nejdřív přidej stanoviště' : undefined"
-                class="relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                class="relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-wait aria-disabled:opacity-50"
                 :class="isPublished ? 'bg-teal-600' : 'bg-slate-300'"
                 @click="togglePublish"
             >
