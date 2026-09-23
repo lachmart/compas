@@ -17,6 +17,18 @@ export function getEcho() {
         wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
         forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
         enabledTransports: ['ws', 'wss'],
+        // Custom authorizer using axios to include XSRF token from cookie.
+        // app.blade.php has no csrf meta tag, so we route private-channel auth
+        // through window.axios (configured in bootstrap.js) which automatically
+        // sends the X-XSRF-TOKEN header, same mechanism as all other API calls.
+        authorizer: (channel) => ({
+            authorize: (socketId, callback) => {
+                window.axios
+                    .post('/broadcasting/auth', { socket_id: socketId, channel_name: channel.name })
+                    .then((response) => callback(null, response.data))
+                    .catch((error) => callback(error));
+            },
+        }),
     });
 
     return instance;
