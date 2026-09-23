@@ -72,45 +72,87 @@ const toggleView = () => {
 <template>
     <Head :title="game.name" />
 
-    <FinishScreen v-if="finished" />
+    <FinishScreen v-if="finished" :avatar="player.avatar" :stars="locations.length" />
 
     <!-- No current location to play (e.g. a published game with zero locations,
          or locations removed mid-session so the player's index now overshoots).
          Reuse FinishScreen as a neutral terminal state rather than crashing on
          a null location prop. -->
-    <FinishScreen v-else-if="!currentLocation" />
+    <FinishScreen v-else-if="!currentLocation" :avatar="player.avatar" :stars="locations.length" />
 
-    <RewardOverlay v-else-if="showingReward" @done="onRewardDone" />
-
-    <PickImageTask
-        v-else-if="activeTask && activeTask.task_type === 'pick_image'"
-        :images="activeTask.images"
-        :game-slug="game.slug"
-        :location-id="currentLocation.id"
-        @completed="onTaskCompleted"
-    />
-
-    <PhotoTask
-        v-else-if="activeTask && ['photo_of_something', 'selfie_doing_something'].includes(activeTask.task_type)"
-        :reference-image="activeTask.reference_image"
-        :task-type="activeTask.task_type"
-        :game-slug="game.slug"
-        :location-id="currentLocation.id"
-        @completed="onTaskCompleted"
-    />
-
+    <!-- Every in-game screen shares one frame so the HUD (animal + stars)
+         stays on top of the compass, the map, tasks and the reward. -->
     <div v-else class="relative h-dvh overflow-hidden">
-        <CompassScreen
-            v-if="viewMode === 'compass'"
-            :location="currentLocation"
+        <RewardOverlay v-if="showingReward" @done="onRewardDone" />
+
+        <PickImageTask
+            v-else-if="activeTask && activeTask.task_type === 'pick_image'"
+            :images="activeTask.images"
             :game-slug="game.slug"
-            @arrived="onArrived"
+            :location-id="currentLocation.id"
+            @completed="onTaskCompleted"
         />
-        <MapScreen
-            v-else
-            :locations="locations"
-            :current-location-id="currentLocation.id"
+
+        <PhotoTask
+            v-else-if="activeTask && ['photo_of_something', 'selfie_doing_something'].includes(activeTask.task_type)"
+            :reference-image="activeTask.reference_image"
+            :task-type="activeTask.task_type"
+            :game-slug="game.slug"
+            :location-id="currentLocation.id"
+            @completed="onTaskCompleted"
         />
+
+        <template v-else>
+            <CompassScreen
+                v-if="viewMode === 'compass'"
+                :location="currentLocation"
+                :game-slug="game.slug"
+                @arrived="onArrived"
+            />
+            <MapScreen
+                v-else
+                :locations="locations"
+                :current-location-id="currentLocation.id"
+            />
+
+            <button
+                type="button"
+                @click="toggleView"
+                :aria-label="viewMode === 'compass' ? 'Mapa' : 'Kompas'"
+                class="absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-5 z-[1000] flex h-16 w-16 items-center justify-center rounded-full bg-white text-teal-700 shadow-xl ring-4 ring-white/60 active:scale-95 motion-safe:transition-transform"
+            >
+                <!-- Folded map -->
+                <svg
+                    v-if="viewMode === 'compass'"
+                    viewBox="0 0 24 24"
+                    class="h-9 w-9"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                >
+                    <path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20Z" class="fill-teal-100" />
+                    <path d="M9 4v13.5M15 6.5V20" />
+                    <circle cx="17.5" cy="10" r="1.6" class="fill-orange-500 stroke-orange-500" />
+                </svg>
+                <!-- Compass -->
+                <svg
+                    v-else
+                    viewBox="0 0 24 24"
+                    class="h-9 w-9"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                >
+                    <circle cx="12" cy="12" r="10" class="fill-teal-100" />
+                    <path d="M15.5 8.5 13.4 13.4 10.6 10.6Z" class="fill-orange-500 stroke-orange-500" />
+                    <path d="M15.5 8.5 13.4 13.4 8.5 15.5 10.6 10.6Z" />
+                </svg>
+            </button>
+        </template>
 
         <PlayerHud
             :avatar="player.avatar"
@@ -118,43 +160,5 @@ const toggleView = () => {
             :completed="currentIndex"
             :current="currentIndex"
         />
-
-        <button
-            type="button"
-            @click="toggleView"
-            :aria-label="viewMode === 'compass' ? 'Mapa' : 'Kompas'"
-            class="absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-5 z-[1000] flex h-16 w-16 items-center justify-center rounded-full bg-white text-teal-700 shadow-xl ring-4 ring-white/60 active:scale-95 motion-safe:transition-transform"
-        >
-            <!-- Folded map -->
-            <svg
-                v-if="viewMode === 'compass'"
-                viewBox="0 0 24 24"
-                class="h-9 w-9"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linejoin="round"
-                aria-hidden="true"
-            >
-                <path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20Z" class="fill-teal-100" />
-                <path d="M9 4v13.5M15 6.5V20" />
-                <circle cx="17.5" cy="10" r="1.6" class="fill-orange-500 stroke-orange-500" />
-            </svg>
-            <!-- Compass -->
-            <svg
-                v-else
-                viewBox="0 0 24 24"
-                class="h-9 w-9"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linejoin="round"
-                aria-hidden="true"
-            >
-                <circle cx="12" cy="12" r="10" class="fill-teal-100" />
-                <path d="M15.5 8.5 13.4 13.4 10.6 10.6Z" class="fill-orange-500 stroke-orange-500" />
-                <path d="M15.5 8.5 13.4 13.4 8.5 15.5 10.6 10.6Z" />
-            </svg>
-        </button>
     </div>
 </template>
