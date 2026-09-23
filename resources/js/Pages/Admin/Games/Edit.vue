@@ -5,6 +5,7 @@ import LocationList from '@/Components/Admin/LocationList.vue';
 
 const props = defineProps({
     game: Object,
+    locations: Array,
 });
 
 const form = useForm({
@@ -50,8 +51,10 @@ const togglePublish = () => {
                         <button
                             type="button"
                             @click="togglePublish"
-                            class="rounded px-4 py-2"
+                            class="rounded px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
                             :class="game.status === 'published' ? 'bg-gray-200' : 'bg-green-600 text-white'"
+                            :disabled="game.status !== 'published' && locations.length === 0"
+                            :title="game.status !== 'published' && locations.length === 0 ? 'Nejdřív přidej stanoviště' : ''"
                         >
                             {{ game.status === 'published' ? 'Skrýt hru' : 'Publikovat' }}
                         </button>
@@ -66,7 +69,7 @@ const togglePublish = () => {
 
                 <div class="bg-white p-6 shadow-sm sm:rounded-lg">
                     <h3 class="mb-4 text-lg font-medium text-gray-800">Stanoviště</h3>
-                    <LocationList :game="game" :locations="game.locations" />
+                    <LocationList :game="game" :locations="locations" />
                 </div>
             </div>
         </div>

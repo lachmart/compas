@@ -69,6 +69,22 @@ test('visiting with an active session shows the play screen with game state', fu
             ->where('locations.0.id', $first->id));
 });
 
+test('the play screen never exposes location names to the player', function () {
+    // See comment in the "shows the join page" test above: this test also
+    // renders a full Inertia page (Play/Show) via a real GET request.
+    $this->withoutVite();
+    config(['inertia.testing.ensure_pages_exist' => false]);
+
+    $game = Game::factory()->create(['status' => GameStatus::Published]);
+    Location::factory()->create(['game_id' => $game->id, 'order' => 1, 'name' => 'Tajná studánka']);
+    $session = PlayerSession::factory()->create(['game_id' => $game->id]);
+
+    $this->withSession(['player_session_id' => $session->id])
+        ->get(route('play.show', $game->slug))
+        ->assertInertia(fn ($page) => $page->component('Play/Show')
+            ->missing('locations.0.name'));
+});
+
 test("a session for a different game does not leak into this game's play screen", function () {
     // See comment in the "shows the join page" test above: this test also
     // renders a full Inertia page (Play/Join) via a real GET request.

@@ -25,6 +25,7 @@ class TrackingController extends Controller
                 'lat' => (float) $location->lat,
                 'lng' => (float) $location->lng,
                 'task_type' => $location->task_type->value,
+                'name' => $location->name,
             ]),
             'players' => $this->trackedPlayers($game),
         ]);
@@ -55,6 +56,7 @@ class TrackingController extends Controller
                     ? Storage::disk('public')->url($attempt->submitted_photo_path)
                     : null,
                 'flagged_invalid' => $attempt->flagged_invalid,
+                'location_name' => $attempt->location->name,
             ])
             ->sortBy('location_position')
             ->values();

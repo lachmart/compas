@@ -85,6 +85,26 @@ test('pick_image rejects a correct_index outside the uploaded images', function 
     expect(Location::count())->toBe(0);
 });
 
+test('forgetting to pick a correct image shows a Czech validation message', function () {
+    $user = User::factory()->create();
+    $game = Game::factory()->create(['owner_id' => $user->id]);
+
+    $response = $this->actingAs($user)->post(route('admin.games.locations.store', $game), [
+        'lat' => 50.08,
+        'lng' => 14.43,
+        'arrival_radius_m' => 15,
+        'task_type' => 'pick_image',
+        'images' => [
+            UploadedFile::fake()->image('a.jpg'),
+            UploadedFile::fake()->image('b.jpg'),
+            UploadedFile::fake()->image('c.jpg'),
+        ],
+    ]);
+
+    $response->assertSessionHasErrors('correct_index');
+    expect(session('errors')->get('correct_index'))->toBe(['Označ správný obrázek.']);
+});
+
 test('pick_image accepts a correct_index within range of the uploaded images', function () {
     $user = User::factory()->create();
     $game = Game::factory()->create(['owner_id' => $user->id]);
@@ -258,4 +278,29 @@ test('a dozor can delete a location', function () {
         ->assertRedirect();
 
     expect(Location::find($location->id))->toBeNull();
+});
+
+test('a location can be stored and updated with an optional name', function () {
+    $user = User::factory()->create();
+    $game = Game::factory()->create(['owner_id' => $user->id]);
+    $base = ['lat' => 50.08, 'lng' => 14.43, 'arrival_radius_m' => 15, 'task_type' => 'arrival_only'];
+
+    $this->actingAs($user)->post(route('admin.games.locations.store', $game), $base + ['name' => 'Studánka'])
+        ->assertSessionHasNoErrors();
+    $location = $game->locations()->first();
+    expect($location->name)->toBe('Studánka');
+
+    $this->actingAs($user)->put(route('admin.games.locations.update', [$game, $location]), $base + ['name' => ''])
+        ->assertSessionHasNoErrors();
+    expect($location->fresh()->name)->toBeNull();
+});
+
+test('a location name longer than 100 characters is rejected', function () {
+    $user = User::factory()->create();
+    $game = Game::factory()->create(['owner_id' => $user->id]);
+
+    $this->actingAs($user)->post(route('admin.games.locations.store', $game), [
+        'lat' => 50.08, 'lng' => 14.43, 'arrival_radius_m' => 15, 'task_type' => 'arrival_only',
+        'name' => str_repeat('a', 101),
+    ])->assertSessionHasErrors('name');
 });

@@ -11,7 +11,7 @@ class Location extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['game_id', 'order', 'lat', 'lng', 'arrival_radius_m', 'task_type', 'task_payload'];
+    protected $fillable = ['game_id', 'order', 'name', 'lat', 'lng', 'arrival_radius_m', 'task_type', 'task_payload'];
 
     protected $casts = [
         'task_type' => TaskType::class,
@@ -40,5 +40,11 @@ class Location extends Model
     public function referenceImage(): ?string
     {
         return $this->task_payload['reference_image'] ?? null;
+    }
+
+    /** Every stored file this location's task payload references. */
+    public function mediaPaths(): array
+    {
+        return array_values(array_filter([...$this->images(), $this->referenceImage()]));
     }
 }

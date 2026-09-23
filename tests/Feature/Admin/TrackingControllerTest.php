@@ -201,3 +201,21 @@ test('polling the player list does not grow queries per player', function () {
 
     expect($fivePlayers)->toBe($onePlayer);
 });
+
+test('tracking exposes location names', function () {
+    $this->first->update(['name' => 'Studánka']);
+    $session = PlayerSession::factory()->create(['game_id' => $this->game->id]);
+    LocationAttempt::factory()->create([
+        'player_session_id' => $session->id, 'location_id' => $this->first->id,
+        'status' => AttemptStatus::Completed,
+    ]);
+
+    $this->actingAs($this->owner)->get(route('admin.games.tracking', $this->game))
+        ->assertInertia(fn ($page) => $page
+            ->where('locations.0.name', 'Studánka')
+            ->where('locations.1.name', null));
+
+    $this->actingAs($this->owner)
+        ->getJson(route('admin.games.players.show', [$this->game, $session]))
+        ->assertJsonPath('attempts.0.location_name', 'Studánka');
+});

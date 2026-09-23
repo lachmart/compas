@@ -51,7 +51,8 @@ const syncPlayers = () => {
         const tooltip = isStale(player, props.now)
             ? `${player.nickname} · ${progressLabel(player)} · naposledy viděn v ${formatTime(player.last_seen_at)}`
             : `${player.nickname} · ${progressLabel(player)}`;
-        marker.setTooltipContent(tooltip);
+        // Pass DOM text node to Leaflet; strings are parsed as HTML, so user-controlled content must use createTextNode to prevent XSS.
+        marker.setTooltipContent(document.createTextNode(tooltip));
     });
 };
 
@@ -69,7 +70,10 @@ onMounted(() => {
                 html: `<div class="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white shadow">${location.position}</div>`,
                 iconSize: [28, 28],
             }),
-        }).addTo(map);
+        })
+            // Pass DOM text node to Leaflet; strings are parsed as HTML, so user-controlled content must use createTextNode to prevent XSS.
+            .bindTooltip(document.createTextNode(location.name || `Stanoviště ${location.position}`))
+            .addTo(map);
         bounds.push([location.lat, location.lng]);
     });
 
