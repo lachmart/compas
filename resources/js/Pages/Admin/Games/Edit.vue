@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
@@ -10,7 +10,7 @@ import LocationForm from '@/Components/Admin/LocationForm.vue';
 import LocationList from '@/Components/Admin/LocationList.vue';
 import SharePanel from '@/Components/Admin/SharePanel.vue';
 import SegmentedTabs from '@/Components/UI/SegmentedTabs.vue';
-import { addState, editState, listState, mapModeFor, reconcileWithLocations } from '@/lib/editorPanel';
+import { addState, editState, hasUnsavedChanges, listState, mapModeFor, reconcileWithLocations } from '@/lib/editorPanel';
 import { locationLabel } from '@/lib/taskTypes';
 
 const props = defineProps({
@@ -39,7 +39,25 @@ const tabs = computed(() => [
     { label: 'Sledování', href: route('admin.games.tracking', props.game.id), active: false },
 ]);
 
+// Shown briefly in the map hint pill when a marker/list click is ignored
+// because the open form has unsaved work.
+const BLOCKED_HINT = 'Nejdřív ulož nebo zruš rozpracované stanoviště';
+const BLOCKED_HINT_MS = 3000;
+const blockedHint = ref(false);
+let blockedHintTimer = null;
+
+const showBlockedHint = () => {
+    blockedHint.value = true;
+    clearTimeout(blockedHintTimer);
+    blockedHintTimer = setTimeout(() => {
+        blockedHint.value = false;
+    }, BLOCKED_HINT_MS);
+};
+
+onBeforeUnmount(() => clearTimeout(blockedHintTimer));
+
 const mapHint = computed(() => {
+    if (blockedHint.value && formOpen.value) return BLOCKED_HINT;
     if (state.value.panel === 'add') {
         return state.value.draft?.lat == null ? 'Klikni do mapy, kam stanoviště umístit' : 'Přetáhni značku nebo klikni jinam';
     }
@@ -48,20 +66,14 @@ const mapHint = computed(() => {
     return null;
 });
 
-// Opening another location would silently drop unsaved changes in the open form.
-const hasUnsavedChanges = () => {
-    if (state.value.panel === 'add') return true;
-    if (state.value.panel !== 'edit' || !selectedLocation.value) return false;
-
-    const { draft } = state.value;
-    const location = selectedLocation.value;
-    const moved = draft.lat !== location.lat || draft.lng !== location.lng || draft.arrival_radius_m !== location.arrival_radius_m;
-
-    return moved || Boolean(formRef.value?.isDirty());
-};
-
 const openLocation = (id) => {
-    if (id === state.value.selectedId || hasUnsavedChanges()) return;
+    if (id === state.value.selectedId) return;
+
+    // Opening another location would silently drop unsaved changes in the open form.
+    if (hasUnsavedChanges(state.value, selectedLocation.value, Boolean(formRef.value?.isDirty()))) {
+        showBlockedHint();
+        return;
+    }
 
     const location = props.locations.find((l) => l.id === id);
     if (!location) return;
@@ -77,6 +89,10 @@ const startAdding = () => {
 const backToList = () => {
     state.value = listState();
 };
+
+watch(formOpen, (open) => {
+    if (!open) blockedHint.value = false;
+});
 
 // GameMap only reports { lat, lng }; keep the radius.
 const onMapDraft = (position) => {
@@ -135,7 +151,7 @@ const confirmDelete = () => {
         <template #breadcrumb>
             <Link :href="route('admin.games.index')" class="hover:text-teal-700">Moje hry</Link>
             <span class="text-slate-300" aria-hidden="true">/</span>
-            <span class="max-w-[40vw] truncate font-medium text-slate-800 sm:max-w-xs">{{ game.name }}</span>
+            <span class="min-w-0 truncate font-medium text-slate-800">{{ game.name }}</span>
         </template>
 
         <template #tabs>
@@ -147,7 +163,8 @@ const confirmDelete = () => {
                 ref="panelEl"
                 class="min-h-0 flex-1 overflow-y-auto border-slate-200 bg-white lg:w-[420px] lg:flex-none lg:shrink-0 lg:border-r"
             >
-                <div v-if="state.panel === 'list'" class="space-y-6 p-5">
+                <!-- The list stays mounted (v-show) so GameSettings keeps its open/unsaved state. -->
+                <div v-show="state.panel === 'list'" class="space-y-6 p-5">
                     <GameHeader :game="game" :locations-count="locations.length" :players-count="players_count" />
                     <SharePanel :play-url="play_url" :slug="game.slug" :published="isPublished" />
                     <LocationList
@@ -162,7 +179,7 @@ const confirmDelete = () => {
                 </div>
 
                 <LocationForm
-                    v-else
+                    v-if="formOpen"
                     ref="formRef"
                     :key="state.panel === 'edit' ? `edit:${state.selectedId}` : 'add'"
                     :game="game"

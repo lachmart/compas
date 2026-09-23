@@ -3,6 +3,7 @@ import {
     addState,
     deleteGameWarning,
     editState,
+    hasUnsavedChanges,
     listState,
     mapModeFor,
     radiusSliderMax,
@@ -73,4 +74,47 @@ test('radius slider max widens for legacy radii', () => {
     expect(radiusSliderMax(100)).toBe(100);
     expect(radiusSliderMax(150)).toBe(150);
     expect(radiusSliderMax(null)).toBe(100);
+});
+
+describe('hasUnsavedChanges', () => {
+    test('the list view never blocks', () => {
+        expect(hasUnsavedChanges(listState(), null, false)).toBe(false);
+        expect(hasUnsavedChanges(listState(), null, true)).toBe(false);
+    });
+
+    test('an untouched add form does not block', () => {
+        expect(hasUnsavedChanges(addState(), null, false)).toBe(false);
+    });
+
+    test('an add form with a placed position blocks', () => {
+        const state = { ...addState(), draft: { lat: 50, lng: 14, arrival_radius_m: 15 } };
+        expect(hasUnsavedChanges(state, null, false)).toBe(true);
+    });
+
+    test('a dirty add form blocks even without a position', () => {
+        expect(hasUnsavedChanges(addState(), null, true)).toBe(true);
+    });
+
+    test('an untouched edit form does not block', () => {
+        expect(hasUnsavedChanges(editState(location), location, false)).toBe(false);
+    });
+
+    test('a dirty edit form blocks', () => {
+        expect(hasUnsavedChanges(editState(location), location, true)).toBe(true);
+    });
+
+    test.each([
+        ['lat', { lat: 50.2 }],
+        ['lng', { lng: 14.5 }],
+        ['radius', { arrival_radius_m: 30 }],
+    ])('an edit draft with a changed %s blocks', (_, change) => {
+        const state = editState(location);
+        state.draft = { ...state.draft, ...change };
+        expect(hasUnsavedChanges(state, location, false)).toBe(true);
+    });
+
+    test('an edit without its location only blocks when the form is dirty', () => {
+        expect(hasUnsavedChanges(editState(location), null, false)).toBe(false);
+        expect(hasUnsavedChanges(editState(location), null, true)).toBe(true);
+    });
 });

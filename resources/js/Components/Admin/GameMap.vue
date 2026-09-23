@@ -26,6 +26,8 @@ const mapEl = ref(null);
 let map = null;
 let locationLayer = null;
 let draftLayer = null;
+// The draft's radius circle, kept so the radius slider can resize it in place.
+let draftCircle = null;
 let resizeObserver = null;
 let isMounted = false;
 // Set on the first real user input on the map (drag, wheel, pinch, zoom
@@ -83,11 +85,13 @@ const drawLocations = () => {
 const drawDraft = () => {
     if (!draftLayer) return;
     draftLayer.clearLayers();
+    draftCircle = null;
 
     const draft = scene.value.draft;
     if (!draft) return;
 
     const circle = draft.radius ? radiusCircle(draft.lat, draft.lng, draft.radius, ORANGE).addTo(draftLayer) : null;
+    draftCircle = circle;
 
     L.marker([draft.lat, draft.lng], {
         icon: numberedIcon(L, draft.number, { selected: true }),
@@ -107,6 +111,14 @@ const drawDraft = () => {
 const redraw = () => {
     drawLocations();
     drawDraft();
+};
+
+// The radius slider fires on every input event: resize the existing circle
+// instead of rebuilding every layer.
+const updateDraftRadius = () => {
+    const radius = scene.value.draft?.radius;
+    if (draftCircle && radius) draftCircle.setRadius(radius);
+    else drawDraft();
 };
 
 const updateCursor = () => {
@@ -189,9 +201,22 @@ onBeforeUnmount(() => {
     map = null;
     locationLayer = null;
     draftLayer = null;
+    draftCircle = null;
 });
 
-watch(scene, redraw);
+// Everything but the draft radius needs a full redraw.
+watch(
+    [
+        () => props.locations,
+        () => props.selectedId,
+        () => props.mode,
+        () => props.draft === null,
+        () => props.draft?.lat,
+        () => props.draft?.lng,
+    ],
+    redraw,
+);
+watch(() => props.draft?.arrival_radius_m, updateDraftRadius);
 watch(() => props.showRadii, drawLocations);
 watch(picking, updateCursor);
 

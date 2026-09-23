@@ -37,3 +37,16 @@ export function deleteGameWarning(playersCount) {
 // The radius slider covers 5–100 m, but older stations may have been saved
 // with up to 200 m — widen the range rather than silently clamping them.
 export const radiusSliderMax = (radius) => Math.max(100, Number(radius) || 0);
+
+// Would switching away from the open form drop the dozor's work?
+// An add form counts only once a position is placed or a field was touched.
+export function hasUnsavedChanges(state, location, formDirty) {
+    if (state.panel === 'add') return state.draft?.lat != null || Boolean(formDirty);
+    if (state.panel !== 'edit') return false;
+    if (formDirty) return true;
+    if (!location || !state.draft) return false;
+
+    const { draft } = state;
+
+    return draft.lat !== location.lat || draft.lng !== location.lng || draft.arrival_radius_m !== location.arrival_radius_m;
+}
