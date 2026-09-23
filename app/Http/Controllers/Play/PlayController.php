@@ -47,6 +47,7 @@ class PlayController extends Controller
             'nickname' => $request->validated('nickname'),
             'current_location_index' => 0,
             'started_at' => now(),
+            'last_seen_at' => now(),
         ]);
 
         session(['player_session_id' => $playerSession->id]);

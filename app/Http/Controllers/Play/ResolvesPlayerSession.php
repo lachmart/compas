@@ -15,6 +15,8 @@ trait ResolvesPlayerSession
         $playerSession = PlayerSession::find($id);
         abort_unless($playerSession && $playerSession->game_id === $game->id, 403);
 
+        $playerSession->markSeen();
+
         return $playerSession;
     }
 

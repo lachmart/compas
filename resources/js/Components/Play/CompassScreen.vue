@@ -44,16 +44,20 @@ const backgroundColor = computed(() => {
 
 let arrivalTimer = null;
 let pingTimer = null;
-let lastPing = null;
+
+const HEARTBEAT_MS = 30000;
+let lastPing = null; // { lat, lng, at }
 
 const sendPingIfMoved = () => {
     if (!position.value) return;
 
-    if (lastPing && distanceMeters(lastPing.lat, lastPing.lng, position.value.lat, position.value.lng) < 5) {
-        return;
-    }
+    const moved = !lastPing
+        || distanceMeters(lastPing.lat, lastPing.lng, position.value.lat, position.value.lng) >= 5;
+    const heartbeatDue = !lastPing || Date.now() - lastPing.at >= HEARTBEAT_MS;
 
-    lastPing = { lat: position.value.lat, lng: position.value.lng };
+    if (!moved && !heartbeatDue) return;
+
+    lastPing = { lat: position.value.lat, lng: position.value.lng, at: Date.now() };
     window.axios
         .post(route('play.pings.store', props.gameSlug), {
             lat: position.value.lat,

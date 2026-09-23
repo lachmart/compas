@@ -15,6 +15,7 @@ class PlayerSessionFactory extends Factory
             'current_location_index' => 0,
             'started_at' => now(),
             'finished_at' => null,
+            'last_seen_at' => now(),
         ];
     }
 }
