@@ -35,6 +35,10 @@ let pollInFlight = false;
 let echo = null;
 // Presentation only: whether updates arrive over Reverb or by polling.
 const usingEcho = ref(false);
+// The Pusher connection state while Echo is used ('initialized', 'connecting',
+// 'connected', 'unavailable', 'failed', 'disconnected').
+const socketState = ref('initialized');
+let socketConnection = null;
 
 const channelName = `games.${props.game.id}.tracking`;
 
@@ -53,6 +57,22 @@ const onProgress = (payload) => {
 
 // Without Reverb (e.g. basic webhosting) the page polls the player list and
 // derives the same progress events by diffing snapshots.
+const startPolling = () => {
+    if (!pollTimer) pollTimer = setInterval(poll, POLL_INTERVAL_MS);
+};
+
+const stopPolling = () => {
+    clearInterval(pollTimer);
+    pollTimer = null;
+};
+
+// While the WebSocket is down, fall back to polling; stop once it reconnects.
+const onSocketStateChange = ({ current }) => {
+    socketState.value = current;
+    if (current === 'connected') stopPolling();
+    else if (current === 'unavailable' || current === 'failed') startPolling();
+};
+
 const poll = async () => {
     if (pollInFlight || document.hidden) return;
 
@@ -80,9 +100,15 @@ onMounted(() => {
     usingEcho.value = Boolean(echo);
 
     if (!echo) {
-        pollTimer = setInterval(poll, POLL_INTERVAL_MS);
+        startPolling();
 
         return;
+    }
+
+    socketConnection = echo.connector?.pusher?.connection ?? null;
+    if (socketConnection) {
+        socketConnection.bind('state_changed', onSocketStateChange);
+        onSocketStateChange({ current: socketConnection.state });
     }
 
     echo
@@ -103,9 +129,15 @@ const tabs = computed(() => [
     { label: 'Sledování', href: route('admin.games.tracking', props.game.id), active: true },
 ]);
 
-// 'live' = Reverb, 'polling' = polling fallback OK, 'error' = last poll failed.
+// 'live' = Reverb connected, 'connecting' = Reverb (re)connecting,
+// 'polling' = polling without Reverb OK, 'error' = socket down or last poll failed.
 const connectionState = computed(() => {
-    if (usingEcho.value) return 'live';
+    if (usingEcho.value) {
+        if (socketState.value === 'connected') return 'live';
+        if (socketState.value === 'connecting' || socketState.value === 'initialized') return 'connecting';
+
+        return 'error';
+    }
 
     return pollFailed.value ? 'error' : 'polling';
 });
@@ -135,7 +167,8 @@ watch(selectedPlayerId, async () => {
 
 onBeforeUnmount(() => {
     clearInterval(nowTimer);
-    clearInterval(pollTimer);
+    stopPolling();
+    if (socketConnection) socketConnection.unbind('state_changed', onSocketStateChange);
     if (echo) echo.leave(channelName);
 });
 </script>
@@ -147,7 +180,7 @@ onBeforeUnmount(() => {
         <template #breadcrumb>
             <Link :href="route('admin.games.index')" class="hover:text-teal-700">Moje hry</Link>
             <span class="text-slate-300" aria-hidden="true">/</span>
-            <span class="max-w-[40vw] truncate font-medium text-slate-800 sm:max-w-xs">{{ game.name }}</span>
+            <span class="min-w-0 truncate font-medium text-slate-800">{{ game.name }}</span>
         </template>
 
         <template #tabs>
@@ -188,6 +221,10 @@ onBeforeUnmount(() => {
                                     <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500" />
                                 </span>
                                 <span class="font-medium text-green-700">Živě</span>
+                            </template>
+                            <template v-else-if="connectionState === 'connecting'">
+                                <span class="h-2.5 w-2.5 rounded-full bg-slate-400" aria-hidden="true" />
+                                <span class="text-slate-600">Připojuji…</span>
                             </template>
                             <template v-else-if="connectionState === 'polling'">
                                 <span class="h-2.5 w-2.5 rounded-full bg-teal-500" aria-hidden="true" />
