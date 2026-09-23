@@ -10,6 +10,7 @@ defineProps({
 const emit = defineEmits(['files']);
 
 const dragOver = ref(false);
+let dragDepth = 0;
 
 function emitFiles(fileList) {
     const files = Array.from(fileList ?? []);
@@ -17,7 +18,23 @@ function emitFiles(fileList) {
     if (files.length) emit('files', files);
 }
 
+// dragenter/dragleave also fire when the pointer crosses child elements
+// (the icon, the text) inside the drop zone, so a plain dragleave handler
+// flickers. A depth counter only clears the state once the pointer has
+// really left the label.
+function onDragEnter() {
+    dragDepth += 1;
+    dragOver.value = true;
+}
+
+function onDragLeave() {
+    dragDepth = Math.max(0, dragDepth - 1);
+
+    if (dragDepth === 0) dragOver.value = false;
+}
+
 function onDrop(e) {
+    dragDepth = 0;
     dragOver.value = false;
     emitFiles(e.dataTransfer?.files);
 }
@@ -30,10 +47,11 @@ function onChange(e) {
 
 <template>
     <label
-        class="block cursor-pointer rounded-xl border-2 border-dashed p-6 text-center text-sm text-slate-600 transition"
+        class="block cursor-pointer rounded-xl border-2 border-dashed p-6 text-center text-sm text-slate-600 transition focus-within:ring-2 focus-within:ring-teal-500 focus-within:ring-offset-2"
         :class="dragOver ? 'border-teal-500 bg-teal-50' : 'border-slate-300'"
-        @dragover.prevent="dragOver = true"
-        @dragleave.prevent="dragOver = false"
+        @dragenter.prevent="onDragEnter"
+        @dragover.prevent
+        @dragleave.prevent="onDragLeave"
         @drop.prevent="onDrop"
     >
         <svg
@@ -51,6 +69,6 @@ function onChange(e) {
             />
         </svg>
         <p>{{ label }}</p>
-        <input type="file" class="hidden" :accept="accept" :multiple="multiple" @change="onChange" />
+        <input type="file" class="sr-only" :accept="accept" :multiple="multiple" @change="onChange" />
     </label>
 </template>

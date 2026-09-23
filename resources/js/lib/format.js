@@ -16,5 +16,5 @@ export function relativeTime(iso, nowMs) {
 
     const d = new Date(iso);
 
-    return `${d.getUTCDate()}. ${d.getUTCMonth() + 1}. ${d.getUTCFullYear()}`;
+    return `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}`;
 }
