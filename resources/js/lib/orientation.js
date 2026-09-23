@@ -76,3 +76,14 @@ export function absoluteOrientation(event) {
 
     return null;
 }
+
+// Relative angles as a fallback for devices that never supply an absolute
+// heading (e.g. a desktop with DevTools sensor emulation). North is then
+// arbitrary — the same compromise the flat arrow already makes.
+export function relativeOrientation(event) {
+    const { alpha, beta, gamma } = event;
+
+    if (typeof alpha !== 'number' || typeof beta !== 'number' || typeof gamma !== 'number') return null;
+
+    return { alpha, beta, gamma };
+}

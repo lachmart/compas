@@ -6,6 +6,7 @@ import {
     UPRIGHT_ENTER_DEG,
     UPRIGHT_EXIT_DEG,
     absoluteOrientation,
+    relativeOrientation,
     cameraHeading,
     nextPosture,
     tiltDegrees,
@@ -187,5 +188,17 @@ describe('absoluteOrientation', () => {
 
     test('ignores events with missing angles', () => {
         expect(absoluteOrientation({ absolute: true, alpha: null, beta: null, gamma: null })).toBeNull();
+    });
+});
+
+describe('relativeOrientation', () => {
+    test('uses the relative angles as-is', () => {
+        expect(relativeOrientation({ absolute: false, alpha: 37.9, beta: 92.1, gamma: -19.6 }))
+            .toEqual({ alpha: 37.9, beta: 92.1, gamma: -19.6 });
+    });
+
+    test('ignores events with missing angles (e.g. a desktop absolute event full of nulls)', () => {
+        expect(relativeOrientation({ absolute: true, alpha: null, beta: null, gamma: null })).toBeNull();
+        expect(relativeOrientation({ alpha: 10, beta: null, gamma: 5 })).toBeNull();
     });
 });

@@ -1,5 +1,5 @@
 import { onUnmounted, ref } from 'vue';
-import { absoluteOrientation } from '@/lib/orientation';
+import { absoluteOrientation, relativeOrientation } from '@/lib/orientation';
 
 export function useSensors() {
     const position = ref(null);
@@ -18,9 +18,15 @@ export function useSensors() {
             hasAbsoluteSource = true;
             orientation.value = absolute;
             heading.value = (360 - absolute.alpha) % 360;
-        } else if (!hasAbsoluteSource && typeof event.alpha === 'number') {
-            // Relative-only fallback (no absolute source seen yet).
-            heading.value = (360 - event.alpha) % 360;
+        } else if (!hasAbsoluteSource) {
+            // Relative-only fallback (no absolute source seen yet), for both
+            // the flat arrow and the upright turn guidance.
+            const relative = relativeOrientation(event);
+
+            if (relative) {
+                orientation.value = relative;
+                heading.value = (360 - relative.alpha) % 360;
+            }
         }
     };
 
