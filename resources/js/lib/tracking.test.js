@@ -3,6 +3,7 @@ import {
     STALE_AFTER_MS,
     applyPosition,
     applyProgress,
+    diffProgress,
     isStale,
     progressLabel,
     progressMessage,
@@ -88,5 +89,37 @@ describe('progressMessage', () => {
         expect(progressMessage({ kind: 'completed_location', player: player({ current_location_index: 3 }) }))
             .toBe('Anna splnil(a) stanoviště 3/8');
         expect(progressMessage({ kind: 'finished', player: player() })).toBe('Anna dokončil(a) hru 🎉');
+    });
+});
+
+describe('diffProgress', () => {
+    it('reports a newly joined player', () => {
+        const events = diffProgress([player()], [player(), player({ id: 2, nickname: 'Bořek' })]);
+
+        expect(events).toEqual([{ kind: 'joined', player: player({ id: 2, nickname: 'Bořek' }) }]);
+    });
+
+    it('reports a completed location when the index moves forward', () => {
+        const next = player({ current_location_index: 3 });
+
+        expect(diffProgress([player()], [next])).toEqual([{ kind: 'completed_location', player: next }]);
+    });
+
+    it('reports finished instead of completed_location for the final location', () => {
+        const next = player({ finished_at: '2026-09-23T11:00:00+00:00' });
+
+        expect(diffProgress([player()], [next])).toEqual([{ kind: 'finished', player: next }]);
+    });
+
+    it('reports nothing when only position or last seen changed', () => {
+        const next = player({ position: { lat: 1, lng: 2, heading: null }, last_seen_at: '2026-09-23T10:05:00+00:00' });
+
+        expect(diffProgress([player()], [next])).toEqual([]);
+    });
+
+    it('does not re-report an already finished player', () => {
+        const done = player({ finished_at: '2026-09-23T11:00:00+00:00' });
+
+        expect(diffProgress([done], [done])).toEqual([]);
     });
 });

@@ -160,3 +160,44 @@ test('tracking page does not have N+1 query for locations_count', function () {
     // This proves locations_count doesn't add per-player COUNT queries
     expect($second_load_count)->toBe($first_load_count);
 });
+
+test('the owner can poll the current player list as json', function () {
+    $session = PlayerSession::factory()->create(['game_id' => $this->game->id, 'nickname' => 'Anna', 'current_location_index' => 1]);
+    $session->pings()->create(['lat' => 50.08, 'lng' => 14.43]);
+
+    $this->actingAs($this->owner)
+        ->getJson(route('admin.games.tracking.players', $this->game))
+        ->assertOk()
+        ->assertJsonCount(1, 'players')
+        ->assertJsonPath('players.0.id', $session->id)
+        ->assertJsonPath('players.0.nickname', 'Anna')
+        ->assertJsonPath('players.0.current_location_index', 1)
+        ->assertJsonPath('players.0.locations_count', 2)
+        ->assertJsonPath('players.0.position.lat', 50.08);
+});
+
+test('another dozor cannot poll the player list', function () {
+    $this->actingAs(User::factory()->create())
+        ->getJson(route('admin.games.tracking.players', $this->game))
+        ->assertForbidden();
+});
+
+test('polling the player list does not grow queries per player', function () {
+    PlayerSession::factory()->create(['game_id' => $this->game->id])->pings()->create(['lat' => 50, 'lng' => 14]);
+    $url = route('admin.games.tracking.players', $this->game);
+    $this->actingAs($this->owner);
+
+    \DB::enableQueryLog();
+    \DB::flushQueryLog();
+    $this->getJson($url)->assertOk();
+    $onePlayer = count(\DB::getQueryLog());
+
+    PlayerSession::factory()->count(4)->create(['game_id' => $this->game->id])
+        ->each(fn ($s) => $s->pings()->create(['lat' => 50, 'lng' => 14]));
+    \DB::flushQueryLog();
+    $this->getJson($url)->assertOk();
+    $fivePlayers = count(\DB::getQueryLog());
+    \DB::disableQueryLog();
+
+    expect($fivePlayers)->toBe($onePlayer);
+});

@@ -44,6 +44,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::patch('games/{game}/locations/reorder', [LocationController::class, 'reorder'])->name('games.locations.reorder');
 
     Route::get('games/{game}/tracking', [TrackingController::class, 'show'])->name('games.tracking');
+    Route::get('games/{game}/tracking/players', [TrackingController::class, 'players'])->name('games.tracking.players');
 
     Route::scopeBindings()->group(function () {
         Route::put('games/{game}/locations/{location}', [LocationController::class, 'update'])->name('games.locations.update');

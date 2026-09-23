@@ -17,9 +17,6 @@ class TrackingController extends Controller
     {
         $this->authorize('view', $game);
 
-        // Load the count once to be shared across all player sessions
-        $game->loadCount('locations');
-
         return Inertia::render('Admin/Games/Tracking', [
             'game' => ['id' => $game->id, 'name' => $game->name, 'slug' => $game->slug],
             'locations' => $game->locations()->get()->values()->map(fn ($location, $index) => [
@@ -29,16 +26,15 @@ class TrackingController extends Controller
                 'lng' => (float) $location->lng,
                 'task_type' => $location->task_type->value,
             ]),
-            'players' => $game->playerSessions()
-                ->with(['latestPing'])
-                ->orderBy('started_at')
-                ->get()
-                ->map(function (PlayerSession $session) use ($game) {
-                    // Ensure the game relation points to our pre-loaded instance with locations_count
-                    $session->setRelation('game', $game);
-                    return TrackedPlayer::make($session);
-                }),
+            'players' => $this->trackedPlayers($game),
         ]);
+    }
+
+    public function players(Game $game)
+    {
+        $this->authorize('view', $game);
+
+        return response()->json(['players' => $this->trackedPlayers($game)]);
     }
 
     public function player(Game $game, PlayerSession $playerSession)
@@ -80,5 +76,22 @@ class TrackingController extends Controller
         $attempt->update(['flagged_invalid' => $validated['flagged_invalid']]);
 
         return response()->json(['flagged_invalid' => $attempt->flagged_invalid]);
+    }
+
+    private function trackedPlayers(Game $game)
+    {
+        // Load the count once and share this game instance across all sessions,
+        // so TrackedPlayer::make() doesn't run a COUNT query per player.
+        $game->loadCount('locations');
+
+        return $game->playerSessions()
+            ->with('latestPing')
+            ->orderBy('started_at')
+            ->get()
+            ->map(function (PlayerSession $session) use ($game) {
+                $session->setRelation('game', $game);
+
+                return TrackedPlayer::make($session);
+            });
     }
 }

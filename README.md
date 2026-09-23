@@ -41,26 +41,42 @@ php artisan boost:install
 
 Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
 
-## Živé sledování (Reverb)
+## Živé sledování hráčů
 
-Sledování hráčů na dozorské stránce (`/admin/games/{game}/tracking`) běží přes
-[Laravel Reverb](https://reverb.laravel.com) (WebSocket broadcasting). Po
-`cp .env.example .env` jsou `REVERB_APP_*` prázdné — broadcast eventy se v
-tom stavu bezpečně přeskočí (hráčské requesty nikdy nespadnou kvůli výpadku
-Reverbu) a dozorská stránka zobrazí hlášku, že živé sledování není dostupné.
+Dozorská stránka `/admin/games/{game}/tracking` umí dva režimy — vybere se
+podle toho, jestli je v době `npm run build` nastavený `VITE_REVERB_APP_KEY`:
 
-Aby sledování fungovalo naživo:
+### Běžný webhosting (výchozí): polling
 
-1. Vygeneruj klíče: `php artisan reverb:install` (doplní `REVERB_APP_*` do
-   `.env`).
+Bez Reverbu se stránka každých 5 s ptá serveru na aktuální stav hráčů
+(`GET /admin/games/{game}/tracking/players`). Nepotřebuje žádný běžící
+proces ani frontu. V `.env` na hostingu nastav:
+
+```dotenv
+BROADCAST_CONNECTION=null
+QUEUE_CONNECTION=sync
+```
+
+a `REVERB_*` / `VITE_REVERB_*` nech prázdné. (`sync` fronta je nutná: s
+`database` frontou bez běžícího workeru by se broadcast joby jen hromadily v
+tabulce `jobs`.)
+
+### VPS: Reverb (WebSockety)
+
+Pro okamžité aktualizace přes [Laravel Reverb](https://reverb.laravel.com):
+
+1. Vygeneruj klíče: `php artisan reverb:install` (doplní `REVERB_APP_*` a
+   `BROADCAST_CONNECTION=reverb` do `.env`).
 2. Lokálně: `composer run dev` nastartuje dev server, queue listener i
-   Reverb server najednou (viz `composer.json` skript `dev`).
-3. Produkce: potřebuje samostatně běžící a supervidované
-   `php artisan queue:work` (broadcast eventy jsou frontované, ne
-   `ShouldBroadcastNow`) a `php artisan reverb:start`, typicky za TLS
-   proxy (nginx/Caddy) kvůli `wss://`.
-4. `VITE_REVERB_*` proměnné se zapékají do JS bundlu v době
-   `npm run build` — po jejich změně je potřeba build spustit znovu.
+   Reverb server najednou.
+3. Produkce: potřebuje supervidované `php artisan queue:work` a
+   `php artisan reverb:start`, typicky za TLS proxy (nginx/Caddy) kvůli
+   `wss://`.
+4. `VITE_REVERB_*` se zapékají do JS bundlu při `npm run build` — po změně
+   je potřeba build spustit znovu.
+
+Výpadek Reverbu nikdy neshodí hráčský request — chyba broadcastu se jen
+zaloguje.
 
 ## Contributing
 

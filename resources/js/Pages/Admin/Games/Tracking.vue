@@ -5,7 +5,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TrackingMap from '@/Components/Admin/TrackingMap.vue';
 import PlayerDetail from '@/Components/Admin/PlayerDetail.vue';
 import { getEcho } from '@/lib/echo';
-import { applyPosition, applyProgress, formatTime, isStale, progressLabel, progressMessage } from '@/lib/tracking';
+import { applyPosition, applyProgress, diffProgress, formatTime, isStale, progressLabel, progressMessage } from '@/lib/tracking';
 
 const props = defineProps({
     game: Object,
@@ -13,14 +13,18 @@ const props = defineProps({
     players: Array,
 });
 
+const POLL_INTERVAL_MS = 5000;
+
 const livePlayers = ref(props.players);
 const now = ref(Date.now());
 const selectedPlayerId = ref(null);
 const detailVersion = ref(0);
 const toasts = ref([]);
-const echoUnavailable = ref(false);
+const pollFailed = ref(false);
 let toastId = 0;
 let nowTimer = null;
+let pollTimer = null;
+let pollInFlight = false;
 let echo = null;
 
 const channelName = `games.${props.game.id}.tracking`;
@@ -33,6 +37,31 @@ const pushToast = (message) => {
     }, 5000);
 };
 
+const onProgress = (payload) => {
+    pushToast(progressMessage(payload));
+    if (payload.player.id === selectedPlayerId.value) detailVersion.value++;
+};
+
+// Without Reverb (e.g. basic webhosting) the page polls the player list and
+// derives the same progress events by diffing snapshots.
+const poll = async () => {
+    if (pollInFlight || document.hidden) return;
+
+    pollInFlight = true;
+    try {
+        const response = await window.axios.get(route('admin.games.tracking.players', props.game.id));
+        const next = response.data.players;
+        diffProgress(livePlayers.value, next).forEach(onProgress);
+        livePlayers.value = next;
+        pollFailed.value = false;
+    } catch (error) {
+        console.error('Failed to poll tracked players', error);
+        pollFailed.value = true;
+    } finally {
+        pollInFlight = false;
+    }
+};
+
 onMounted(() => {
     nowTimer = setInterval(() => {
         now.value = Date.now();
@@ -41,7 +70,7 @@ onMounted(() => {
     echo = getEcho();
 
     if (!echo) {
-        echoUnavailable.value = true;
+        pollTimer = setInterval(poll, POLL_INTERVAL_MS);
 
         return;
     }
@@ -53,13 +82,13 @@ onMounted(() => {
         })
         .listen('.player.progressed', (payload) => {
             livePlayers.value = applyProgress(livePlayers.value, payload);
-            pushToast(progressMessage(payload));
-            if (payload.player.id === selectedPlayerId.value) detailVersion.value++;
+            onProgress(payload);
         });
 });
 
 onBeforeUnmount(() => {
     clearInterval(nowTimer);
+    clearInterval(pollTimer);
     if (echo) echo.leave(channelName);
 });
 </script>
@@ -76,8 +105,8 @@ onBeforeUnmount(() => {
         </template>
 
         <div class="mx-auto max-w-7xl px-4 pt-4">
-            <p v-if="echoUnavailable" class="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
-                Živé sledování není dostupné (Reverb není nakonfigurovaný) — data se aktualizují jen po obnovení stránky.
+            <p v-if="pollFailed" class="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+                Nepodařilo se načíst aktuální data — zkouším to znovu…
             </p>
         </div>
 
