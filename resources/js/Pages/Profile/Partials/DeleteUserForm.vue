@@ -1,9 +1,8 @@
 <script setup>
-import DangerButton from '@/Components/DangerButton.vue';
+import UIButton from '@/Components/UI/Button.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import Modal from '@/Components/Modal.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { useForm } from '@inertiajs/vue3';
 import { nextTick, ref } from 'vue';
@@ -48,7 +47,7 @@ const closeModal = () => {
             </p>
         </header>
 
-        <DangerButton @click="confirmUserDeletion">Smazat účet</DangerButton>
+        <UIButton variant="danger" @click="confirmUserDeletion">Smazat účet</UIButton>
 
         <Modal :show="confirmingUserDeletion" @close="closeModal">
             <div class="p-6">
@@ -82,15 +81,14 @@ const closeModal = () => {
                     <InputError :message="form.errors.password" class="mt-2" />
                 </div>
 
-                <div class="mt-6 flex justify-end">
-                    <SecondaryButton @click="closeModal"> Zrušit </SecondaryButton>
+                <div class="mt-6 flex justify-end gap-3">
+                    <UIButton variant="secondary" @click="closeModal"> Zrušit </UIButton>
 
-                    <DangerButton
-                        class="ms-3"
-                        :class="{ 'opacity-25': form.processing }"
-                        :disabled="form.processing"
+                    <UIButton
+                        variant="danger"
+                        :processing="form.processing"
                         @click="deleteUser"
-                    > Smazat účet </DangerButton>
+                    > Smazat účet </UIButton>
                 </div>
             </div>
         </Modal>

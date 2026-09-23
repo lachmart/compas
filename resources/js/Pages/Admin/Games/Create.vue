@@ -1,5 +1,9 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Card from '@/Components/UI/Card.vue';
+import FormField from '@/Components/UI/FormField.vue';
+import UIButton from '@/Components/UI/Button.vue';
+import TextInput from '@/Components/TextInput.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 
 const form = useForm({ name: '' });
@@ -11,24 +15,19 @@ const submit = () => form.post(route('admin.games.store'));
     <Head title="Nová hra" />
 
     <AuthenticatedLayout>
-        <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">Nová hra</h2>
-        </template>
+        <template #header>Nová hra</template>
 
-        <div class="py-12">
-            <div class="mx-auto max-w-xl sm:px-6 lg:px-8">
-                <form @submit.prevent="submit" class="space-y-4 bg-white p-6 shadow-sm sm:rounded-lg">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Název hry</label>
-                        <input v-model="form.name" type="text" class="mt-1 block w-full rounded border-gray-300" />
-                        <p v-if="form.errors.name" class="mt-1 text-sm text-red-600">{{ form.errors.name }}</p>
-                    </div>
+        <Card>
+            <form @submit.prevent="submit" class="max-w-xl space-y-6">
+                <FormField label="Název hry" hint="Uvidíš ho jen ty, dětem se nezobrazuje." for="name" :error="form.errors.name">
+                    <TextInput id="name" v-model="form.name" type="text" class="block w-full" autofocus />
+                </FormField>
 
-                    <button type="submit" :disabled="form.processing" class="rounded bg-indigo-600 px-4 py-2 text-white">
-                        Vytvořit
-                    </button>
-                </form>
-            </div>
-        </div>
+                <div class="flex items-center gap-3">
+                    <UIButton type="submit" :processing="form.processing">Vytvořit a pokračovat na mapu</UIButton>
+                    <UIButton variant="secondary" :href="route('admin.games.index')">Zpět</UIButton>
+                </div>
+            </form>
+        </Card>
     </AuthenticatedLayout>
 </template>
