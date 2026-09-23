@@ -130,3 +130,12 @@ test('the edit page lists locations with image urls and the correct index', func
             ->where('locations.0.images.0.url', fn ($url) => str_ends_with($url, '/storage/task-images/a.jpg'))
             ->where('locations.0.reference_image', null));
 });
+
+test('the games list includes each game\'s location count', function () {
+    $user = User::factory()->create();
+    $game = Game::factory()->create(['owner_id' => $user->id]);
+    Location::factory()->count(2)->create(['game_id' => $game->id]);
+
+    $this->actingAs($user)->get(route('admin.games.index'))
+        ->assertInertia(fn ($page) => $page->where('games.0.locations_count', 2));
+});

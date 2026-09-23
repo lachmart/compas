@@ -17,7 +17,7 @@ class GameController extends Controller
     public function index(Request $request)
     {
         return Inertia::render('Admin/Games/Index', [
-            'games' => $request->user()->games()->latest()->get(),
+            'games' => $request->user()->games()->withCount('locations')->latest()->get(),
         ]);
     }
 
