@@ -1,6 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, useForm, router } from '@inertiajs/vue3';
+import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import LocationList from '@/Components/Admin/LocationList.vue';
 
 const props = defineProps({
@@ -55,6 +55,12 @@ const togglePublish = () => {
                         >
                             {{ game.status === 'published' ? 'Skrýt hru' : 'Publikovat' }}
                         </button>
+                        <Link
+                            :href="route('admin.games.tracking', game.id)"
+                            class="rounded bg-gray-100 px-4 py-2 text-gray-800"
+                        >
+                            Sledovat hráče
+                        </Link>
                     </div>
                 </form>
 
