@@ -538,6 +538,12 @@ onBeforeUnmount(() => {
                                     :processing="busyIds.has(player.id)"
                                     @click="unhidePlayer(player)"
                                 >Zobrazit</Button>
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    class="shrink-0 !text-red-600 hover:!bg-red-50"
+                                    @click="askDeletePlayer(player)"
+                                >Smazat</Button>
                             </li>
                         </ul>
                     </section>

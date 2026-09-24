@@ -13,7 +13,10 @@ class PlayerSession extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['game_id', 'nickname', 'avatar', 'current_location_index', 'started_at', 'finished_at', 'last_seen_at', 'hidden_at'];
+    // hidden_at is set only via forceFill (TrackingController::hide/unhide,
+    // AttemptController::completeAttempt) or a query builder update() (bulk
+    // hide/unhide) — never through mass assignment.
+    protected $fillable = ['game_id', 'nickname', 'avatar', 'current_location_index', 'started_at', 'finished_at', 'last_seen_at'];
 
     protected $casts = [
         'avatar' => Avatar::class,
