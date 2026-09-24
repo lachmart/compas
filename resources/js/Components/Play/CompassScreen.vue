@@ -3,6 +3,7 @@ import { computed, onUnmounted, ref, watch } from 'vue';
 import { arrowRotationDegrees, bearingDegrees, distanceMeters } from '@/lib/geo';
 import { cameraHeading, nextPosture, turnGuidance } from '@/lib/orientation';
 import { HEAT_LEVELS, heatGradient, heatLevel } from '@/lib/proximity';
+import { isSessionGone, reloadForGoneSession } from '@/lib/playSession';
 import { useSensors } from '@/lib/useSensors';
 import ArrivalRing from '@/Components/Play/ArrivalRing.vue';
 import CompassArrow from '@/Components/Play/CompassArrow.vue';
@@ -106,6 +107,12 @@ const confirmArrival = async () => {
         const response = await window.axios.post(route('play.attempts.arrive', [props.gameSlug, props.location.id]));
         emit('arrived', response.data);
     } catch (error) {
+        if (isSessionGone(error)) {
+            reloadForGoneSession();
+
+            return;
+        }
+
         console.error('Failed to confirm arrival', error);
         hasArrivalError.value = true;
     } finally {

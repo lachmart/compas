@@ -1,6 +1,7 @@
 import { onUnmounted, watch } from 'vue';
 import { useSensors } from '@/lib/useSensors';
 import { shouldSendPing } from '@/lib/pings';
+import { isSessionGone, reloadForGoneSession } from '@/lib/playSession';
 
 const PING_INTERVAL_MS = 5000;
 
@@ -30,7 +31,14 @@ export function usePositionPings(gameSlug, enabled) {
                 lng: position.value.lng,
                 heading: heading.value,
             })
-            .catch(() => {});
+            .catch((error) => {
+                // The player was deleted mid-game: stop pinging and send the
+                // browser back to the join screen instead of retrying forever.
+                if (isSessionGone(error)) {
+                    stop();
+                    reloadForGoneSession();
+                }
+            });
     };
 
     const start = () => {

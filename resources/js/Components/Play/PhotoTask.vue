@@ -2,6 +2,7 @@
 import { onUnmounted, ref } from 'vue';
 import ErrorFlash from '@/Components/Play/ErrorFlash.vue';
 import { playSuccess, unlockAudio } from '@/lib/feedback';
+import { isSessionGone, reloadForGoneSession } from '@/lib/playSession';
 
 const props = defineProps({
     referenceImage: { type: String, required: true },
@@ -57,6 +58,12 @@ const onCapture = async (event) => {
         playSuccess();
         doneTimer = setTimeout(() => emit('completed', response.data.player), DONE_MS);
     } catch (error) {
+        if (isSessionGone(error)) {
+            reloadForGoneSession();
+
+            return;
+        }
+
         console.error('Failed to upload photo', error);
         hasError.value = true;
         clearPreview();

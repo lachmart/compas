@@ -2,6 +2,7 @@
 import { onUnmounted, ref } from 'vue';
 import ErrorFlash from '@/Components/Play/ErrorFlash.vue';
 import { playSuccess, playWrong, unlockAudio } from '@/lib/feedback';
+import { isSessionGone, reloadForGoneSession } from '@/lib/playSession';
 
 const props = defineProps({
     images: { type: Array, required: true },
@@ -59,6 +60,12 @@ const pick = async (index) => {
             showWrong(index);
         }
     } catch (error) {
+        if (isSessionGone(error)) {
+            reloadForGoneSession();
+
+            return;
+        }
+
         console.error('Failed to submit answer', error);
         hasError.value = true;
     } finally {
