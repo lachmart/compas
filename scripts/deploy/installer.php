@@ -62,9 +62,11 @@ $app = require $root.'/bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
+// migrate first: optimize:clear empties the database cache store, whose
+// table doesn't exist yet on the very first deploy.
 foreach ([
-    ['optimize:clear', []],
     ['migrate', ['--force' => true]],
+    ['optimize:clear', []],
     ['storage:link', []],
     ['optimize', []],
 ] as [$command, $arguments]) {

@@ -2,7 +2,8 @@
 # takže .env, vendor/, storage/ a ostatní soubory mimo public/ nejsou z webu dostupné.
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteRule ^(.*)$ public/$1 [L]
+    # Already-rewritten paths are left alone, otherwise Apache loops.
+    RewriteRule ^((?!public/).*)$ public/$1 [L]
 </IfModule>
 
 <IfModule !mod_rewrite.c>
