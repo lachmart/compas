@@ -73,9 +73,13 @@ QUEUE_CONNECTION=sync
 CACHE_STORE=database
 FILESYSTEM_DISK=local
 
-# Hosting blokuje síťové funkce PHP (stream_socket_client, proc_open),
-# SMTP ani sendmail tu nefungují – e-maily jdou jen do logu.
-MAIL_MAILER=log
+# Hosting blokuje stream_socket_client, SMTP proto jde přes fsockopen
+# (mailer "hosting", viz app/Mail/FsockopenSmtpStream.php).
+MAIL_MAILER=hosting
+MAIL_HOST=$MAIL_HOST
+MAIL_PORT=$MAIL_PORT
+MAIL_USERNAME=$MAIL_USERNAME
+MAIL_PASSWORD=$(dotenv_quote "$MAIL_PASSWORD")
 MAIL_FROM_ADDRESS=$MAIL_FROM_ADDRESS
 MAIL_FROM_NAME=Kompas
 EOF
