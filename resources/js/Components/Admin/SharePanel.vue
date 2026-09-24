@@ -64,8 +64,8 @@ onBeforeUnmount(() => clearTimeout(copiedTimer));
         class="rounded-2xl bg-gradient-to-br from-teal-50 to-white p-4 ring-1 ring-teal-900/10"
         aria-labelledby="share-heading"
     >
-        <h2 id="share-heading" class="text-sm font-semibold text-teal-900">Pro děti</h2>
-        <p class="mt-0.5 text-xs text-slate-600">Pošli odkaz nebo nech děti načíst QR kód.</p>
+        <h2 id="share-heading" class="text-sm font-semibold text-teal-900">Pro hráče</h2>
+        <p class="mt-0.5 text-xs text-slate-600">Pošli odkaz nebo nech hráče načíst QR kód.</p>
 
         <div class="mt-3 flex gap-2">
             <input
@@ -91,7 +91,7 @@ onBeforeUnmount(() => clearTimeout(copiedTimer));
                 v-html="qrSvg"
             />
             <div class="space-y-2">
-                <p class="text-xs text-slate-600">Vytiskni QR kód a dej ho dětem na start.</p>
+                <p class="text-xs text-slate-600">Vytiskni QR kód a dej ho hráčům na start.</p>
                 <a
                     v-if="qrPng"
                     :href="qrPng"
@@ -109,6 +109,6 @@ onBeforeUnmount(() => clearTimeout(copiedTimer));
     </section>
 
     <p v-else class="rounded-2xl border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-500">
-        Po publikování tu bude odkaz a QR kód pro děti.
+        Po publikování tu bude odkaz a QR kód pro hráče.
     </p>
 </template>

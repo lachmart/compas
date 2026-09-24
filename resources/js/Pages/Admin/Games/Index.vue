@@ -13,7 +13,7 @@ defineProps({
     games: Array,
 });
 
-const FIRST_STEPS = ['Pojmenuj hru', 'Rozmísti stanoviště na mapě', 'Pošli dětem odkaz nebo QR kód'];
+const FIRST_STEPS = ['Pojmenuj hru', 'Rozmísti stanoviště na mapě', 'Pošli hráčům odkaz nebo QR kód'];
 
 // Ticks so "Naposledy aktivní před 5 min" doesn't go stale while the page is open.
 const now = ref(Date.now());
@@ -84,7 +84,7 @@ const deleteMessage = computed(() => (pendingDelete.value ? `Smazat hru \u201e${
         <Card v-else class="overflow-hidden bg-gradient-to-br from-white via-white to-teal-50/60">
             <EmptyState
                 title="Vytvoř svou první hru"
-                text="Hra je trasa stanovišť, ke kterým děti dojdou podle kompasu."
+                text="Hra je trasa stanovišť, ke kterým hráči dojdou podle kompasu."
             >
                 <template #icon>
                     <ApplicationLogo class="h-10 w-10" />

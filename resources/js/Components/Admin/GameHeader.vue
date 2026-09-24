@@ -51,7 +51,7 @@ const togglePublish = () => {
                 <p id="publish-label" class="text-sm font-semibold text-slate-800">Publikováno</p>
                 <p class="text-xs text-slate-500">
                     <template v-if="cannotPublish">Nejdřív přidej stanoviště</template>
-                    <template v-else-if="isPublished">Děti můžou hru hrát</template>
+                    <template v-else-if="isPublished">Hráči můžou hru hrát</template>
                     <template v-else>Hru zatím vidíš jen ty</template>
                 </p>
             </div>

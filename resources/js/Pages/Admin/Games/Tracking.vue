@@ -623,7 +623,7 @@ onBeforeUnmount(() => {
                     <EmptyState
                         v-if="!livePlayers.length"
                         title="Zatím se nikdo nepřipojil"
-                        text="Pošli dětem odkaz nebo jim ukaž QR kód."
+                        text="Pošli hráčům odkaz nebo jim ukaž QR kód."
                     >
                         <template #icon>
                             <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">

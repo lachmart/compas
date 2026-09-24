@@ -27,8 +27,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => clearInterval(refreshTimer));
 
-// The only text on the player side: filled in by an adult, optional.
-const NAME_PLACEHOLDER = 'Jm\u00e9no (vypln\u00ed dosp\u011bl\u00fd)';
+// Optional name; younger players can have it typed in by an adult.
+const NAME_PLACEHOLDER = 'Jm\u00e9no (nepovinn\u00e9)';
 // Screen-reader label of the play button ("Play").
 const PLAY_LABEL = 'Hr\u00e1t';
 

@@ -33,7 +33,7 @@ import { Link } from '@inertiajs/vue3';
                 <span class="mt-3 text-3xl font-bold tracking-tight text-teal-900">Kompas</span>
             </Link>
             <p class="mt-1 text-center text-sm text-teal-800/80">
-                Hra s kompasem pro děti, které ještě neumí číst.
+                Venkovní hra s kompasem a úkoly
             </p>
 
             <div class="mt-6 rounded-2xl bg-white px-6 py-8 shadow-xl shadow-teal-900/10 ring-1 ring-teal-900/5 sm:px-8">

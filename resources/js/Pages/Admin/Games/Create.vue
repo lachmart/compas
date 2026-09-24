@@ -19,7 +19,7 @@ const submit = () => form.post(route('admin.games.store'));
 
         <Card>
             <form @submit.prevent="submit" class="max-w-xl space-y-6">
-                <FormField label="Název hry" hint="Uvidíš ho jen ty, dětem se nezobrazuje." for="name" :error="form.errors.name">
+                <FormField label="Název hry" hint="Uvidíš ho jen ty, hráčům se nezobrazuje." for="name" :error="form.errors.name">
                     <TextInput id="name" v-model="form.name" type="text" class="block w-full" autofocus />
                 </FormField>
 
