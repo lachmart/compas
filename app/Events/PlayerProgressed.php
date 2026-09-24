@@ -14,6 +14,11 @@ class PlayerProgressed implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
+    // If the player is deleted while this broadcast waits in the queue,
+    // unserializing $playerSession throws ModelNotFoundException; this makes
+    // the queue drop the job quietly instead of retrying/failing forever.
+    public $deleteWhenMissingModels = true;
+
     /**
      * @param  'joined'|'completed_location'|'finished'  $kind
      */

@@ -13,6 +13,12 @@ class PlayerPositionUpdated implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
+    // If the ping's player is deleted (cascading the ping itself) while this
+    // broadcast waits in the queue, unserializing $ping throws
+    // ModelNotFoundException; this makes the queue drop the job quietly
+    // instead of retrying/failing forever.
+    public $deleteWhenMissingModels = true;
+
     public function __construct(public PositionPing $ping) {}
 
     public function broadcastOn(): PrivateChannel
