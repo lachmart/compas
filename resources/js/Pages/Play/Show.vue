@@ -8,6 +8,8 @@ import PickImageTask from '@/Components/Play/PickImageTask.vue';
 import PhotoTask from '@/Components/Play/PhotoTask.vue';
 import PasswordTask from '@/Components/Play/PasswordTask.vue';
 import InfoCard from '@/Components/Play/InfoCard.vue';
+import JournalButton from '@/Components/Play/JournalButton.vue';
+import JournalOverlay from '@/Components/Play/JournalOverlay.vue';
 import RewardOverlay from '@/Components/Play/RewardOverlay.vue';
 import FinishScreen from '@/Components/Play/FinishScreen.vue';
 import { unlockAudio } from '@/lib/feedback';
@@ -60,6 +62,13 @@ onMounted(() => {
 onUnmounted(stopUnlockListeners);
 
 const currentLocation = computed(() => props.locations[currentIndex.value] ?? null);
+
+// The journal (text boards of passed stations) is offered once a passed
+// station has one.
+const journalOpen = ref(false);
+const hasJournal = computed(() =>
+    props.locations.some((location, index) => location.has_info && (finished.value || index < currentIndex.value)),
+);
 
 const onArrived = (data) => {
     if (data.info) {
@@ -123,7 +132,12 @@ const toggleView = () => {
 <template>
     <Head :title="game.name" />
 
-    <FinishScreen v-if="finished" :avatar="player.avatar" :stars="locations.length" />
+    <JournalOverlay v-if="journalOpen" :game-slug="game.slug" @close="journalOpen = false" />
+
+    <div v-if="finished" class="relative">
+        <FinishScreen :avatar="player.avatar" :stars="locations.length" />
+        <JournalButton v-if="hasJournal" @open="journalOpen = true" />
+    </div>
 
     <!-- No current location to play (e.g. a published game with zero locations,
          or locations removed mid-session so the player's index now overshoots).
@@ -175,6 +189,8 @@ const toggleView = () => {
                 :current-index="currentIndex"
                 :avatar="player.avatar"
             />
+
+            <JournalButton v-if="hasJournal" @open="journalOpen = true" />
 
             <button
                 type="button"

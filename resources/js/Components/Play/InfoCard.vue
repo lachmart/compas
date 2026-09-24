@@ -6,6 +6,8 @@ import { unlockAudio } from '@/lib/feedback';
 const props = defineProps({
     // { title, text, images } — plain text, rendered escaped (no HTML).
     info: { type: Object, required: true },
+    // Re-reading from the journal: the button goes back instead of on.
+    back: { type: Boolean, default: false },
 });
 const emit = defineEmits(['continue']);
 
@@ -25,7 +27,11 @@ const next = () => {
 </script>
 
 <template>
-    <div class="h-dvh w-full overflow-y-auto bg-gradient-to-b from-emerald-100 via-teal-50 to-sky-100 px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-28">
+    <!-- In the game the player HUD sits on top (pt-28); the journal covers it. -->
+    <div
+        class="h-dvh w-full overflow-y-auto bg-gradient-to-b from-emerald-100 via-teal-50 to-sky-100 px-4 pb-[max(2rem,env(safe-area-inset-bottom))]"
+        :class="back ? 'pt-[max(1.5rem,env(safe-area-inset-top))]' : 'pt-28'"
+    >
         <article class="mx-auto w-full max-w-xl rounded-3xl bg-white p-6 shadow-xl ring-1 ring-teal-900/5 sm:p-8">
             <h1 v-if="info.title" class="break-words text-2xl font-bold text-teal-900">{{ info.title }}</h1>
 
@@ -48,11 +54,15 @@ const next = () => {
         <div class="mx-auto mt-6 flex max-w-xl justify-center">
             <button
                 type="button"
-                class="inline-flex items-center gap-2 rounded-full bg-orange-500 px-8 py-4 text-xl font-bold text-white shadow-xl ring-4 ring-white active:scale-95 motion-safe:transition-transform"
+                class="inline-flex items-center gap-2 rounded-full px-8 py-4 text-xl font-bold shadow-xl ring-4 ring-white active:scale-95 motion-safe:transition-transform"
+                :class="back ? 'bg-white text-teal-800' : 'bg-orange-500 text-white'"
                 @click="next"
             >
-                Pokračovat
-                <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <svg v-if="back" viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M19 12H5M11 6l-6 6 6 6" />
+                </svg>
+                {{ back ? 'Zpět' : 'Pokračovat' }}
+                <svg v-if="!back" viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M5 12h14M13 6l6 6-6 6" />
                 </svg>
             </button>

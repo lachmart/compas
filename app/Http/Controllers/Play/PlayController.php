@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Play;
 
+use App\Enums\AttemptStatus;
 use App\Enums\Avatar;
 use App\Events\PlayerProgressed;
 use App\Http\Controllers\Controller;
@@ -35,6 +36,9 @@ class PlayController extends Controller
                 'lng' => (float) $location->lng,
                 'arrival_radius_m' => $location->arrival_radius_m,
                 'task_type' => $location->task_type->value,
+                // Only whether a text board exists; its content comes from
+                // journal() once the station is done.
+                'has_info' => $location->hasInfo(),
             ])->values(),
             'player' => [
                 'current_location_index' => $playerSession->current_location_index,
@@ -42,6 +46,39 @@ class PlayController extends Controller
                 'avatar' => $playerSession->avatar?->value,
             ],
         ]);
+    }
+
+    /**
+     * The text boards of the stations this player has completed, to read
+     * again. Boards of stations ahead are never sent (they may hold the clue
+     * to a password).
+     */
+    public function journal(Game $game)
+    {
+        $playerSession = $this->resolvePlayerSession($game);
+
+        $completed = $playerSession->attempts()
+            ->where('status', AttemptStatus::Completed)
+            ->pluck('location_id')
+            ->flip();
+
+        $entries = [];
+
+        foreach ($game->locations()->get()->values() as $index => $location) {
+            if (! $completed->has($location->id) || ! $location->hasInfo()) {
+                continue;
+            }
+
+            $entries[] = [
+                'id' => $location->id,
+                'position' => $index + 1,
+                'title' => $location->info_title,
+                'text' => $location->info_text,
+                'images' => collect($location->infoImages())->map(fn ($path) => Storage::disk('public')->url($path))->values()->all(),
+            ];
+        }
+
+        return response()->json(['entries' => $entries]);
     }
 
     public function join(JoinGameRequest $request, Game $game)
