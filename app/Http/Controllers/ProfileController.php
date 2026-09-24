@@ -53,6 +53,9 @@ class ProfileController extends Controller
 
         Auth::logout();
 
+        // The games cascade with the user in the database, but their files
+        // (task images, children's photos) must be removed explicitly.
+        $user->games()->get()->each->deleteWithFiles();
         $user->delete();
 
         $request->session()->invalidate();

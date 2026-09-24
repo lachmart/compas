@@ -94,6 +94,7 @@ test('a wrong answer does not advance and can be retried', function () {
 
 test('submitting a photo completes a photo_of_something attempt', function () {
     Storage::fake('public');
+    Storage::fake('local');
     $game = Game::factory()->create(['status' => GameStatus::Published]);
     $loc = Location::factory()->create([
         'game_id' => $game->id, 'order' => 1, 'task_type' => 'photo_of_something',
@@ -112,7 +113,10 @@ test('submitting a photo completes a photo_of_something attempt', function () {
     $response->assertOk();
     $attempt = LocationAttempt::first();
     expect($attempt->status)->toBe(AttemptStatus::Completed);
-    Storage::disk('public')->assertExists($attempt->submitted_photo_path);
+    // Children's photos are private and re-encoded, never public files.
+    Storage::disk('local')->assertExists($attempt->submitted_photo_path);
+    Storage::disk('public')->assertMissing($attempt->submitted_photo_path);
+    expect(Storage::disk('public')->allFiles())->toBe([]);
 });
 
 test('a player cannot act on a location that is not their current target', function () {
@@ -126,7 +130,7 @@ test('a player cannot act on a location that is not their current target', funct
         ->assertForbidden();
 });
 
-test("a location belonging to a different game 404s even for a valid session", function () {
+test('a location belonging to a different game 404s even for a valid session', function () {
     $gameA = Game::factory()->create(['status' => GameStatus::Published]);
     $gameB = Game::factory()->create(['status' => GameStatus::Published]);
     $locB = Location::factory()->create(['game_id' => $gameB->id, 'order' => 1]);

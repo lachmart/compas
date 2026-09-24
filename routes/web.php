@@ -43,6 +43,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         Route::delete('games/{game}/locations/{location}', [LocationController::class, 'destroy'])->name('games.locations.destroy');
         Route::get('games/{game}/players/{playerSession}', [TrackingController::class, 'player'])->name('games.players.show');
         Route::get('games/{game}/players/{playerSession}/path', [TrackingController::class, 'path'])->name('games.players.path');
+        Route::get('games/{game}/players/{playerSession}/attempts/{attempt}/photo', [TrackingController::class, 'photo'])->name('games.players.attempts.photo');
         Route::patch('games/{game}/players/{playerSession}/attempts/{attempt}/flag', [TrackingController::class, 'flag'])->name('games.players.attempts.flag');
         Route::patch('games/{game}/players/{playerSession}/hide', [TrackingController::class, 'hide'])->name('games.players.hide');
         Route::patch('games/{game}/players/{playerSession}/unhide', [TrackingController::class, 'unhide'])->name('games.players.unhide');
@@ -52,15 +53,15 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
 
 Route::prefix('hra/{game:slug}')->middleware('published.game')->group(function () {
     Route::get('/', [PlayController::class, 'show'])->name('play.show');
-    Route::post('/join', [PlayController::class, 'join'])->name('play.join');
+    Route::post('/join', [PlayController::class, 'join'])->middleware('throttle:play-join')->name('play.join');
 
     Route::scopeBindings()->group(function () {
-        Route::post('/locations/{location}/arrive', [AttemptController::class, 'arrive'])->name('play.attempts.arrive');
-        Route::post('/locations/{location}/answer', [AttemptController::class, 'answer'])->name('play.attempts.answer');
-        Route::post('/locations/{location}/photo', [AttemptController::class, 'photo'])->name('play.attempts.photo');
+        Route::post('/locations/{location}/arrive', [AttemptController::class, 'arrive'])->middleware('throttle:play-actions')->name('play.attempts.arrive');
+        Route::post('/locations/{location}/answer', [AttemptController::class, 'answer'])->middleware('throttle:play-actions')->name('play.attempts.answer');
+        Route::post('/locations/{location}/photo', [AttemptController::class, 'photo'])->middleware('throttle:play-photo')->name('play.attempts.photo');
     });
 
-    Route::post('/pings', [PositionPingController::class, 'store'])->name('play.pings.store');
+    Route::post('/pings', [PositionPingController::class, 'store'])->middleware('throttle:play-pings')->name('play.pings.store');
 });
 
 require __DIR__.'/auth.php';

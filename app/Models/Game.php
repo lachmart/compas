@@ -4,10 +4,12 @@ namespace App\Models;
 
 use App\Enums\Avatar;
 use App\Enums\GameStatus;
+use App\Support\AttemptPhotos;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class Game extends Model
 {
@@ -29,9 +31,26 @@ class Game extends Model
         return $this->hasMany(Location::class)->orderBy('order')->orderBy('id');
     }
 
-    public function playerSessions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function playerSessions(): HasMany
     {
         return $this->hasMany(PlayerSession::class);
+    }
+
+    /**
+     * Deletes the game (locations, players, attempts and pings cascade) and
+     * then its files: the dozor's task images and the children's photos.
+     */
+    public function deleteWithFiles(): void
+    {
+        $taskImages = $this->locations->flatMap->mediaPaths();
+        $photos = LocationAttempt::whereIn('player_session_id', $this->playerSessions()->pluck('id'))
+            ->whereNotNull('submitted_photo_path')
+            ->pluck('submitted_photo_path');
+
+        $this->delete();
+
+        Storage::disk('public')->delete($taskImages->all());
+        AttemptPhotos::delete($photos);
     }
 
     /**

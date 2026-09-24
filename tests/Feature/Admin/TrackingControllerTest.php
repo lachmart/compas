@@ -6,6 +6,7 @@ use App\Models\Location;
 use App\Models\LocationAttempt;
 use App\Models\PlayerSession;
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
     $this->owner = User::factory()->create();
@@ -57,7 +58,37 @@ test('player detail lists attempts with times and photo urls', function () {
         ->assertJsonPath('attempts.1.location_position', 2)
         ->assertJsonPath('attempts.1.status', 'completed')
         ->assertJsonPath('attempts.1.flagged_invalid', false)
-        ->assertJson(fn ($json) => $json->where('attempts.1.photo_url', fn ($url) => str_ends_with($url, '/storage/attempt-photos/x.jpg'))->etc());
+        ->assertJsonPath('attempts.1.photo_url', route('admin.games.players.attempts.photo', [$this->game, $session, LocationAttempt::where('location_id', $this->second->id)->first()]));
+});
+
+test('the owner gets a child\'s photo through the protected route', function () {
+    Storage::fake('local');
+    Storage::disk('local')->put('attempt-photos/x.jpg', 'jpeg-bytes');
+    $session = PlayerSession::factory()->create(['game_id' => $this->game->id]);
+    $attempt = LocationAttempt::factory()->create([
+        'player_session_id' => $session->id, 'location_id' => $this->second->id,
+        'submitted_photo_path' => 'attempt-photos/x.jpg',
+    ]);
+    $url = route('admin.games.players.attempts.photo', [$this->game, $session, $attempt]);
+
+    $response = $this->actingAs($this->owner)->get($url);
+    $response->assertOk();
+    expect($response->streamedContent())->toBe('jpeg-bytes')
+        ->and($response->headers->get('Cache-Control'))->toContain('private');
+
+    $this->actingAs(User::factory()->create())->get($url)->assertForbidden();
+
+    auth()->logout();
+    $this->get($url)->assertRedirect(route('login'));
+});
+
+test('a photo of another game\'s attempt is not found', function () {
+    $session = PlayerSession::factory()->create(['game_id' => $this->game->id]);
+    $foreign = LocationAttempt::factory()->create(['submitted_photo_path' => 'attempt-photos/y.jpg']);
+
+    $this->actingAs($this->owner)
+        ->get(route('admin.games.players.attempts.photo', [$this->game, $session, $foreign]))
+        ->assertNotFound();
 });
 
 test('player detail is scoped to the game in the url', function () {
@@ -136,11 +167,11 @@ test('tracking page does not have N+1 query for locations_count', function () {
     }
 
     // Measure query count for first request (1 player)
-    \DB::flushQueryLog();
-    \DB::enableQueryLog();
+    DB::flushQueryLog();
+    DB::enableQueryLog();
     $this->actingAs($this->owner)->get(route('admin.games.tracking', $this->game));
-    $first_load_count = count(\DB::getQueryLog());
-    \DB::disableQueryLog();
+    $first_load_count = count(DB::getQueryLog());
+    DB::disableQueryLog();
 
     // Add 4 more players (5 total now, 5x initial)
     for ($i = 0; $i < 4; $i++) {
@@ -150,11 +181,11 @@ test('tracking page does not have N+1 query for locations_count', function () {
     // Measure query count for second request (5 players)
     // With N+1 issue, each additional player adds a COUNT query, so 5 players would cost more than 1 player
     // With the fix, query cost should be identical since locations_count is pre-loaded and shared
-    \DB::flushQueryLog();
-    \DB::enableQueryLog();
+    DB::flushQueryLog();
+    DB::enableQueryLog();
     $this->actingAs($this->owner)->get(route('admin.games.tracking', $this->game));
-    $second_load_count = count(\DB::getQueryLog());
-    \DB::disableQueryLog();
+    $second_load_count = count(DB::getQueryLog());
+    DB::disableQueryLog();
 
     // The query counts should be equal: both requests should cost the same number of queries
     // This proves locations_count doesn't add per-player COUNT queries
@@ -187,17 +218,17 @@ test('polling the player list does not grow queries per player', function () {
     $url = route('admin.games.tracking.players', $this->game);
     $this->actingAs($this->owner);
 
-    \DB::enableQueryLog();
-    \DB::flushQueryLog();
+    DB::enableQueryLog();
+    DB::flushQueryLog();
     $this->getJson($url)->assertOk();
-    $onePlayer = count(\DB::getQueryLog());
+    $onePlayer = count(DB::getQueryLog());
 
     PlayerSession::factory()->count(4)->create(['game_id' => $this->game->id])
         ->each(fn ($s) => $s->pings()->create(['lat' => 50, 'lng' => 14]));
-    \DB::flushQueryLog();
+    DB::flushQueryLog();
     $this->getJson($url)->assertOk();
-    $fivePlayers = count(\DB::getQueryLog());
-    \DB::disableQueryLog();
+    $fivePlayers = count(DB::getQueryLog());
+    DB::disableQueryLog();
 
     expect($fivePlayers)->toBe($onePlayer);
 });

@@ -116,8 +116,9 @@ test('a dozor can delete their own game', function () {
 
 test('deleting a game also deletes task images and player attempt photos', function () {
     Storage::fake('public');
+    Storage::fake('local');
     Storage::disk('public')->put('task-images/task.jpg', 'x');
-    Storage::disk('public')->put('attempt-photos/attempt.jpg', 'x');
+    Storage::disk('local')->put('attempt-photos/attempt.jpg', 'x');
 
     $user = User::factory()->create();
     $game = Game::factory()->create(['owner_id' => $user->id]);
@@ -137,7 +138,34 @@ test('deleting a game also deletes task images and player attempt photos', funct
         ->assertRedirect(route('admin.games.index'));
 
     Storage::disk('public')->assertMissing('task-images/task.jpg');
-    Storage::disk('public')->assertMissing('attempt-photos/attempt.jpg');
+    Storage::disk('local')->assertMissing('attempt-photos/attempt.jpg');
+});
+
+test('deleting the dozor account also deletes the files of their games', function () {
+    Storage::fake('public');
+    Storage::fake('local');
+    Storage::disk('public')->put('task-images/task.jpg', 'x');
+    Storage::disk('local')->put('attempt-photos/attempt.jpg', 'x');
+
+    $user = User::factory()->create();
+    $game = Game::factory()->create(['owner_id' => $user->id]);
+    $location = Location::factory()->create([
+        'game_id' => $game->id,
+        'task_type' => 'pick_image',
+        'task_payload' => ['images' => ['task-images/task.jpg'], 'correct_index' => 0],
+    ]);
+    LocationAttempt::factory()->create([
+        'player_session_id' => PlayerSession::factory()->create(['game_id' => $game->id])->id,
+        'location_id' => $location->id,
+        'submitted_photo_path' => 'attempt-photos/attempt.jpg',
+    ]);
+
+    $this->actingAs($user)->delete('/profile', ['password' => 'password'])->assertRedirect('/');
+
+    expect(User::find($user->id))->toBeNull()
+        ->and(Game::find($game->id))->toBeNull();
+    Storage::disk('public')->assertMissing('task-images/task.jpg');
+    Storage::disk('local')->assertMissing('attempt-photos/attempt.jpg');
 });
 
 test('the edit page lists locations with image urls and the correct index', function () {

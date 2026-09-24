@@ -12,6 +12,7 @@ use App\Models\Game;
 use App\Models\Location;
 use App\Models\LocationAttempt;
 use App\Models\PlayerSession;
+use App\Support\AttemptPhotos;
 use Illuminate\Support\Facades\Storage;
 
 class AttemptController extends Controller
@@ -86,7 +87,7 @@ class AttemptController extends Controller
             ->where('location_id', $location->id)
             ->firstOrFail();
 
-        $path = $request->file('photo')->store('attempt-photos', 'public');
+        $path = AttemptPhotos::store($request->file('photo')->getRealPath());
         $attempt->update(['submitted_photo_path' => $path]);
 
         $this->completeAttempt($attempt, $playerSession);

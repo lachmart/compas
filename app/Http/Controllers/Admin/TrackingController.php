@@ -6,9 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Game;
 use App\Models\LocationAttempt;
 use App\Models\PlayerSession;
+use App\Support\AttemptPhotos;
 use App\Support\TrackedPlayer;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -77,7 +77,7 @@ class TrackingController extends Controller
                 'arrived_at' => $attempt->arrived_at?->toIso8601String(),
                 'completed_at' => $attempt->completed_at?->toIso8601String(),
                 'photo_url' => $attempt->submitted_photo_path
-                    ? Storage::disk('public')->url($attempt->submitted_photo_path)
+                    ? route('admin.games.players.attempts.photo', [$game, $playerSession, $attempt])
                     : null,
                 'flagged_invalid' => $attempt->flagged_invalid,
                 'location_name' => $attempt->location->name,
@@ -89,6 +89,16 @@ class TrackingController extends Controller
             'player' => TrackedPlayer::make($playerSession),
             'attempts' => $attempts,
         ]);
+    }
+
+    /** A child's task photo — only ever served to the game's dozor. */
+    public function photo(Game $game, PlayerSession $playerSession, LocationAttempt $attempt)
+    {
+        $this->authorize('view', $game);
+
+        abort_unless($attempt->submitted_photo_path, 404);
+
+        return AttemptPhotos::response($attempt->submitted_photo_path);
     }
 
     public function flag(Request $request, Game $game, PlayerSession $playerSession, LocationAttempt $attempt)
@@ -130,7 +140,7 @@ class TrackingController extends Controller
 
         $playerSession->delete();
 
-        Storage::disk('public')->delete($photos->all());
+        AttemptPhotos::delete($photos);
 
         return response()->noContent();
     }
@@ -168,7 +178,7 @@ class TrackingController extends Controller
 
         PlayerSession::whereIn('id', $playerSessions->pluck('id'))->delete();
 
-        Storage::disk('public')->delete($photos->all());
+        AttemptPhotos::delete($photos);
 
         return $count;
     }
