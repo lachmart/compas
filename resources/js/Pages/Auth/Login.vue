@@ -13,6 +13,9 @@ defineProps({
     canResetPassword: {
         type: Boolean,
     },
+    canRegister: {
+        type: Boolean,
+    },
     status: {
         type: String,
     },
@@ -87,8 +90,10 @@ const submit = () => {
             <AuthButton :processing="form.processing">Přihlásit se</AuthButton>
         </form>
 
-        <AuthDivider />
+        <template v-if="canRegister">
+            <AuthDivider />
 
-        <AuthLinkButton :href="route('register')">Vytvořit účet</AuthLinkButton>
+            <AuthLinkButton :href="route('register')">Vytvořit účet</AuthLinkButton>
+        </template>
     </GuestLayout>
 </template>

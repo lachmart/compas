@@ -16,6 +16,14 @@ return [
     'name' => env('APP_NAME', 'Laravel'),
 
     /*
+    | Whether new dozor accounts can sign up. Off by default: the app stores
+    | children's data, so accounts are opened deliberately (flip it on in
+    | .env for a moment, register, flip it off again).
+    */
+
+    'registration_enabled' => (bool) env('REGISTRATION_ENABLED', false),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
