@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { INACTIVE_AFTER_MS, inactiveIds, isInactive, splitPlayers } from './playerVisibility';
+import { INACTIVE_AFTER_MS, inactiveIds, isInactive, reconcilePoll, splitPlayers } from './playerVisibility';
 
 const now = Date.parse('2026-09-24T12:00:00Z');
 const p = (id, o) => ({ id, finished_at: null, hidden: false, last_seen_at: '2026-09-24T11:59:30Z', ...o });
@@ -38,4 +38,34 @@ test('inactiveIds lists visible inactive players only', () => {
     ];
 
     expect(inactiveIds(players, now)).toEqual([2, 3]);
+});
+
+test('reconcilePoll applies a fresh response and derives progress events', () => {
+    const previous = [p(1)];
+    const next = [p(1), p(2)];
+
+    const { players, events } = reconcilePoll(previous, next, { stale: false, deletedIds: new Set() });
+
+    expect(players.map((x) => x.id)).toEqual([1, 2]);
+    expect(events).toEqual([{ kind: 'joined', player: next[1] }]);
+});
+
+test('reconcilePoll ignores a stale response (a local change landed meanwhile)', () => {
+    const previous = [p(1, { hidden: true })];
+    const next = [p(1, { hidden: false }), p(2)];
+
+    const result = reconcilePoll(previous, next, { stale: true, deletedIds: new Set() });
+
+    expect(result.players).toBe(previous);
+    expect(result.events).toEqual([]);
+});
+
+test('reconcilePoll never re-adds a deleted player and raises no joined event', () => {
+    const previous = [p(1)];
+    const next = [p(1), p(2)];
+
+    const { players, events } = reconcilePoll(previous, next, { stale: false, deletedIds: new Set([2]) });
+
+    expect(players.map((x) => x.id)).toEqual([1]);
+    expect(events).toEqual([]);
 });

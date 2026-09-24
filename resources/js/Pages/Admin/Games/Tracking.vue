@@ -14,8 +14,8 @@ import { avatarEmoji } from '@/lib/avatars';
 import { getEcho } from '@/lib/echo';
 import { pluralize } from '@/lib/format';
 import { sortPlayers } from '@/lib/playerOrder';
-import { inactiveIds, splitPlayers } from '@/lib/playerVisibility';
-import { applyPosition, applyProgress, diffProgress, isStale, progressMessage } from '@/lib/tracking';
+import { inactiveIds, reconcilePoll, splitPlayers } from '@/lib/playerVisibility';
+import { applyPosition, applyProgress, isStale, progressMessage } from '@/lib/tracking';
 
 const props = defineProps({
     game: Object,
@@ -45,6 +45,12 @@ const socketState = ref('initialized');
 let socketConnection = null;
 
 const channelName = `games.${props.game.id}.tracking`;
+
+// Bumped whenever a local hide/unhide/delete succeeds, so a poll response that
+// was in flight meanwhile (and may predate the change) is discarded.
+let mutationVersion = 0;
+// Players deleted on this page; they can never legitimately reappear.
+const deletedIds = new Set();
 
 const pushToast = (message, tone = 'info') => {
     const id = ++toastId;
@@ -81,11 +87,15 @@ const poll = async () => {
     if (pollInFlight || document.hidden) return;
 
     pollInFlight = true;
+    const versionAtRequest = mutationVersion;
     try {
         const response = await window.axios.get(route('admin.games.tracking.players', props.game.id));
-        const next = response.data.players;
-        diffProgress(livePlayers.value, next).forEach(onProgress);
-        livePlayers.value = next;
+        const { players, events } = reconcilePoll(livePlayers.value, response.data.players, {
+            stale: versionAtRequest !== mutationVersion,
+            deletedIds,
+        });
+        events.forEach(onProgress);
+        livePlayers.value = players;
         pollFailed.value = false;
     } catch (error) {
         console.error('Failed to poll tracked players', error);
@@ -121,6 +131,7 @@ onMounted(() => {
             livePlayers.value = applyPosition(livePlayers.value, payload);
         })
         .listen('.player.progressed', (payload) => {
+            if (deletedIds.has(payload.player.id)) return;
             livePlayers.value = applyProgress(livePlayers.value, payload);
             onProgress(payload);
         });
@@ -171,10 +182,13 @@ const stats = computed(() => {
 const playerLabel = (player) => `${avatarEmoji(player.avatar)} ${player.nickname}`;
 
 const replacePlayer = (updated) => {
+    mutationVersion++;
     livePlayers.value = livePlayers.value.map((p) => (p.id === updated.id ? updated : p));
 };
 
 const removePlayers = (ids) => {
+    mutationVersion++;
+    ids.forEach((id) => deletedIds.add(id));
     const gone = new Set(ids);
     livePlayers.value = livePlayers.value.filter((p) => !gone.has(p.id));
 };
@@ -248,6 +262,7 @@ const runBulk = async (action, ids) => {
         return;
     }
 
+    mutationVersion++;
     const affected = new Set(ids);
     const hidden = action === 'hide';
     livePlayers.value = livePlayers.value.map((p) => (affected.has(p.id) ? { ...p, hidden } : p));
@@ -323,7 +338,7 @@ const deleteMessage = computed(() => {
 });
 
 const deleteWarning = computed(() =>
-    pendingDelete.value?.kind === 'bulk'
+    pendingDelete.value?.kind === 'bulk' && pendingDelete.value.ids.length > 1
         ? 'Smaže se i jejich průběh a fotky. Tato akce je nevratná.'
         : 'Smaže se i jeho průběh a fotky. Tato akce je nevratná.',
 );
