@@ -82,6 +82,9 @@ MAIL_USERNAME=$MAIL_USERNAME
 MAIL_PASSWORD=$(dotenv_quote "$MAIL_PASSWORD")
 MAIL_FROM_ADDRESS=$MAIL_FROM_ADDRESS
 MAIL_FROM_NAME=Kompas
+
+# Veřejná registrace dozorů (každý vidí jen svoje hry).
+REGISTRATION_ENABLED=true
 EOF
 fi
 
