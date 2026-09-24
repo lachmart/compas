@@ -1,0 +1,10 @@
+# Subdoména míří na kořen aplikace, ne na public/ – všechno posíláme do public/,
+# takže .env, vendor/, storage/ a ostatní soubory mimo public/ nejsou z webu dostupné.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    Require all denied
+</IfModule>
