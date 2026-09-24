@@ -36,12 +36,16 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
 
     Route::get('games/{game}/tracking', [TrackingController::class, 'show'])->name('games.tracking');
     Route::get('games/{game}/tracking/players', [TrackingController::class, 'players'])->name('games.tracking.players');
+    Route::post('games/{game}/players/bulk', [TrackingController::class, 'bulk'])->name('games.players.bulk');
 
     Route::scopeBindings()->group(function () {
         Route::put('games/{game}/locations/{location}', [LocationController::class, 'update'])->name('games.locations.update');
         Route::delete('games/{game}/locations/{location}', [LocationController::class, 'destroy'])->name('games.locations.destroy');
         Route::get('games/{game}/players/{playerSession}', [TrackingController::class, 'player'])->name('games.players.show');
         Route::patch('games/{game}/players/{playerSession}/attempts/{attempt}/flag', [TrackingController::class, 'flag'])->name('games.players.attempts.flag');
+        Route::patch('games/{game}/players/{playerSession}/hide', [TrackingController::class, 'hide'])->name('games.players.hide');
+        Route::patch('games/{game}/players/{playerSession}/unhide', [TrackingController::class, 'unhide'])->name('games.players.unhide');
+        Route::delete('games/{game}/players/{playerSession}', [TrackingController::class, 'destroy'])->name('games.players.destroy');
     });
 });
 

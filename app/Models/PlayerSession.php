@@ -13,7 +13,7 @@ class PlayerSession extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['game_id', 'nickname', 'avatar', 'current_location_index', 'started_at', 'finished_at', 'last_seen_at'];
+    protected $fillable = ['game_id', 'nickname', 'avatar', 'current_location_index', 'started_at', 'finished_at', 'last_seen_at', 'hidden_at'];
 
     protected $casts = [
         'avatar' => Avatar::class,
@@ -21,6 +21,7 @@ class PlayerSession extends Model
         'started_at' => 'datetime',
         'finished_at' => 'datetime',
         'last_seen_at' => 'datetime',
+        'hidden_at' => 'datetime',
     ];
 
     public function game(): BelongsTo

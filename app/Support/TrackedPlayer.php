@@ -25,6 +25,7 @@ class TrackedPlayer
             'locations_count' => $game->locations_count ?? $game->locations()->count(),
             'finished_at' => $playerSession->finished_at?->toIso8601String(),
             'last_seen_at' => ($playerSession->last_seen_at ?? $playerSession->started_at)->toIso8601String(),
+            'hidden' => $playerSession->hidden_at !== null,
             'position' => $ping ? [
                 'lat' => (float) $ping->lat,
                 'lng' => (float) $ping->lng,

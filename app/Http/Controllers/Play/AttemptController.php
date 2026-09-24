@@ -99,6 +99,11 @@ class AttemptController extends Controller
     private function completeAttempt(LocationAttempt $attempt, PlayerSession $playerSession): void
     {
         $attempt->update(['status' => AttemptStatus::Completed, 'completed_at' => now()]);
+
+        if ($playerSession->hidden_at !== null) {
+            $playerSession->forceFill(['hidden_at' => null])->save();
+        }
+
         $playerSession->advance();
 
         // A Reverb outage must never fail a player request (Global

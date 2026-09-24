@@ -9,6 +9,7 @@ use App\Models\PlayerSession;
 use App\Support\TrackedPlayer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class TrackingController extends Controller
@@ -79,6 +80,75 @@ class TrackingController extends Controller
         $attempt->update(['flagged_invalid' => $validated['flagged_invalid']]);
 
         return response()->json(['flagged_invalid' => $attempt->flagged_invalid]);
+    }
+
+    public function hide(Game $game, PlayerSession $playerSession)
+    {
+        $this->authorize('update', $game);
+
+        $playerSession->forceFill(['hidden_at' => now()])->save();
+
+        return response()->json(['player' => TrackedPlayer::make($playerSession->fresh())]);
+    }
+
+    public function unhide(Game $game, PlayerSession $playerSession)
+    {
+        $this->authorize('update', $game);
+
+        $playerSession->forceFill(['hidden_at' => null])->save();
+
+        return response()->json(['player' => TrackedPlayer::make($playerSession->fresh())]);
+    }
+
+    public function destroy(Game $game, PlayerSession $playerSession)
+    {
+        $this->authorize('update', $game);
+
+        $photos = $playerSession->attempts()->whereNotNull('submitted_photo_path')->pluck('submitted_photo_path');
+
+        $playerSession->delete();
+
+        Storage::disk('public')->delete($photos->all());
+
+        return response()->noContent();
+    }
+
+    public function bulk(Request $request, Game $game)
+    {
+        $this->authorize('update', $game);
+
+        $validated = $request->validate([
+            'action' => ['required', 'string', 'in:hide,unhide,delete'],
+            'ids' => ['required', 'array', 'min:1', 'max:500'],
+            'ids.*' => ['integer', Rule::exists('player_sessions', 'id')->where('game_id', $game->id)],
+        ]);
+
+        $query = $game->playerSessions()->whereIn('id', $validated['ids']);
+
+        $affected = match ($validated['action']) {
+            'hide' => $query->update(['hidden_at' => now()]),
+            'unhide' => $query->update(['hidden_at' => null]),
+            'delete' => $this->bulkDelete($query),
+        };
+
+        return response()->json(['affected' => $affected]);
+    }
+
+    private function bulkDelete($query): int
+    {
+        $playerSessions = $query->get();
+
+        $photos = LocationAttempt::whereIn('player_session_id', $playerSessions->pluck('id'))
+            ->whereNotNull('submitted_photo_path')
+            ->pluck('submitted_photo_path');
+
+        $count = $playerSessions->count();
+
+        PlayerSession::whereIn('id', $playerSessions->pluck('id'))->delete();
+
+        Storage::disk('public')->delete($photos->all());
+
+        return $count;
     }
 
     private function trackedPlayers(Game $game)
