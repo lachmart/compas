@@ -16,7 +16,12 @@ class JoinGameRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'avatar' => ['required', Rule::enum(Avatar::class)],
+            'avatar' => [
+                'required',
+                Rule::enum(Avatar::class),
+                // Another child in the game already has this animal.
+                Rule::notIn($this->route('game')->takenAvatars()),
+            ],
             'nickname' => ['nullable', 'string', 'max:50'],
         ];
     }

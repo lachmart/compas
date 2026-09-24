@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Avatar;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,6 +27,20 @@ class PlayerSession extends Model
         'last_seen_at' => 'datetime',
         'hidden_at' => 'datetime',
     ];
+
+    // Same threshold as INACTIVE_AFTER_MS in resources/js/lib/playerVisibility.js.
+    public const INACTIVE_AFTER_MINUTES = 30;
+
+    /**
+     * Players still in the game: not hidden by the dozor, not finished and
+     * seen recently.
+     */
+    public function scopeActive(Builder $query): void
+    {
+        $query->whereNull('hidden_at')
+            ->whereNull('finished_at')
+            ->where('last_seen_at', '>=', now()->subMinutes(self::INACTIVE_AFTER_MINUTES));
+    }
 
     public function game(): BelongsTo
     {

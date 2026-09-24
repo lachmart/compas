@@ -1,6 +1,6 @@
 <script setup>
-import { ref } from 'vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { Head, router, useForm } from '@inertiajs/vue3';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import { AVATARS } from '@/lib/avatars';
 import { unlockAudio } from '@/lib/feedback';
@@ -8,7 +8,24 @@ import { requestOrientationPermission } from '@/lib/orientationPermission';
 
 const props = defineProps({
     game: Object,
+    // Animals other children in this game already have; shown faded and
+    // not pickable. Refreshed while the screen is open.
+    taken_avatars: { type: Array, default: () => [] },
 });
+
+const isTaken = (key) => props.taken_avatars.includes(key);
+
+// Another child may grab an animal while this screen is open.
+const TAKEN_REFRESH_MS = 5000;
+let refreshTimer = null;
+
+onMounted(() => {
+    refreshTimer = setInterval(() => {
+        if (!form.processing) router.reload({ only: ['taken_avatars'] });
+    }, TAKEN_REFRESH_MS);
+});
+
+onBeforeUnmount(() => clearInterval(refreshTimer));
 
 // The only text on the player side: filled in by an adult, optional.
 const NAME_PLACEHOLDER = 'Jm\u00e9no (vypln\u00ed dosp\u011bl\u00fd)';
@@ -21,6 +38,14 @@ const form = useForm({ avatar: null, nickname: '' });
 // 'shake' = the server rejected the avatar. Both are wordless hints.
 const hint = ref(null);
 
+// Drop a selection someone else took meanwhile (refresh or a rejected join).
+watch(
+    () => props.taken_avatars,
+    () => {
+        if (form.avatar && isTaken(form.avatar)) form.avatar = null;
+    },
+);
+
 const showHint = (kind) => {
     hint.value = null;
     // Next frame, so the same animation can replay on repeated taps.
@@ -28,6 +53,12 @@ const showHint = (kind) => {
 };
 
 const pick = (key) => {
+    if (isTaken(key)) {
+        showHint('shake');
+
+        return;
+    }
+
     form.avatar = key;
     form.clearErrors('avatar');
     hint.value = null;
@@ -107,10 +138,13 @@ const play = () => {
                     type="button"
                     role="radio"
                     :aria-checked="form.avatar === animal.key"
+                    :aria-disabled="isTaken(animal.key)"
                     :aria-label="animal.label"
                     class="flex aspect-square w-full max-w-[88px] select-none items-center justify-center rounded-full bg-white shadow-lg shadow-teal-900/10 ring-1 ring-teal-900/5 transition duration-200 ease-out focus:outline-none focus-visible:ring-4 focus-visible:ring-teal-500 active:scale-95"
                     :class="[
-                        form.avatar === animal.key
+                        isTaken(animal.key)
+                            ? 'cursor-not-allowed opacity-30 shadow-none grayscale active:scale-100'
+                            : form.avatar === animal.key
                             ? 'z-10 scale-110 !ring-4 !ring-orange-400 shadow-orange-500/30 active:scale-105'
                             : form.avatar
                               ? 'opacity-80'

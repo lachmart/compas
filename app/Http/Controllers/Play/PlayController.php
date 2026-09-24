@@ -22,6 +22,7 @@ class PlayController extends Controller
         if (! $playerSession) {
             return Inertia::render('Play/Join', [
                 'game' => ['name' => $game->name, 'slug' => $game->slug],
+                'taken_avatars' => $game->takenAvatars(),
             ]);
         }
 
