@@ -164,7 +164,9 @@ const play = () => {
                 </button>
             </div>
 
-            <!-- Filled in by an adult; small so it doesn't compete with the animals. -->
+            <!-- Filled in by an adult; small so it doesn't compete with the animals.
+                 Text stays 16px: iOS zooms into smaller inputs on focus and the
+                 zoom sticks into the game, pushing the compass off-centre. -->
             <input
                 v-model="form.nickname"
                 type="text"
@@ -173,7 +175,7 @@ const play = () => {
                 enterkeyhint="go"
                 :placeholder="NAME_PLACEHOLDER"
                 :aria-label="NAME_PLACEHOLDER"
-                class="w-full max-w-60 rounded-full border-0 bg-white/80 px-4 py-2 text-center text-sm text-teal-900 shadow-inner ring-1 ring-teal-900/10 placeholder:text-teal-800/50 focus:bg-white focus:ring-2 focus:ring-teal-500"
+                class="w-full max-w-60 rounded-full border-0 bg-white/80 px-4 py-2 text-center text-base text-teal-900 shadow-inner ring-1 ring-teal-900/10 placeholder:text-teal-800/50 focus:bg-white focus:ring-2 focus:ring-teal-500"
                 :class="{ '!ring-2 !ring-red-400': form.errors.nickname }"
             />
 
