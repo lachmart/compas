@@ -10,6 +10,11 @@ const props = defineProps({
     locations: { type: Array, required: true },
     players: { type: Array, required: true },
     now: { type: Number, required: true },
+    // Walked path of the selected player: [[lat, lng], ...] in ping order.
+    path: { type: Array, default: () => [] },
+    pathColor: { type: String, default: TEAL },
+    // Which player the path belongs to; the map zooms to a new path once.
+    pathKey: { type: [Number, String], default: null },
 });
 const emit = defineEmits(['select']);
 
@@ -17,6 +22,9 @@ const mapEl = ref(null);
 let map;
 let resizeObserver = null;
 const playerMarkers = new Map();
+let pathLine = null;
+let pathStart = null;
+let fittedPathKey = null;
 
 const CZ_CENTER = [49.8, 15.5];
 const FIT_OPTIONS = { padding: [60, 60], maxZoom: 17 };
@@ -62,6 +70,34 @@ const syncPlayers = () => {
     });
 };
 
+const syncPath = () => {
+    if (!map) return;
+
+    if (props.path.length === 0) {
+        pathLine?.remove();
+        pathStart?.remove();
+        pathLine = pathStart = null;
+        fittedPathKey = null;
+
+        return;
+    }
+
+    const style = { color: props.pathColor, weight: 4, opacity: 0.75, lineJoin: 'round', interactive: false };
+
+    if (!pathLine) {
+        pathLine = L.polyline(props.path, style).addTo(map);
+        pathStart = L.circleMarker(props.path[0], { radius: 6, color: '#fff', weight: 2, fillColor: props.pathColor, fillOpacity: 1, interactive: false }).addTo(map);
+    } else {
+        pathLine.setLatLngs(props.path).setStyle(style);
+        pathStart.setLatLng(props.path[0]).setStyle({ fillColor: props.pathColor });
+    }
+
+    if (fittedPathKey !== props.pathKey) {
+        fittedPathKey = props.pathKey;
+        map.fitBounds(pathLine.getBounds(), FIT_OPTIONS);
+    }
+};
+
 const fitAll = () => {
     if (!map) return;
 
@@ -101,6 +137,7 @@ onMounted(() => {
     }
 
     syncPlayers();
+    syncPath();
 
     // The panel layout resizes the map (mobile ↔ desktop).
     resizeObserver = new ResizeObserver(() => map?.invalidateSize());
@@ -115,6 +152,7 @@ onBeforeUnmount(() => {
 });
 
 watch(() => [props.players, props.now], syncPlayers);
+watch(() => [props.path, props.pathColor, props.pathKey], syncPath);
 
 defineExpose({ fitAll });
 </script>

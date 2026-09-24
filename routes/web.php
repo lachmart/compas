@@ -42,6 +42,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         Route::put('games/{game}/locations/{location}', [LocationController::class, 'update'])->name('games.locations.update');
         Route::delete('games/{game}/locations/{location}', [LocationController::class, 'destroy'])->name('games.locations.destroy');
         Route::get('games/{game}/players/{playerSession}', [TrackingController::class, 'player'])->name('games.players.show');
+        Route::get('games/{game}/players/{playerSession}/path', [TrackingController::class, 'path'])->name('games.players.path');
         Route::patch('games/{game}/players/{playerSession}/attempts/{attempt}/flag', [TrackingController::class, 'flag'])->name('games.players.attempts.flag');
         Route::patch('games/{game}/players/{playerSession}/hide', [TrackingController::class, 'hide'])->name('games.players.hide');
         Route::patch('games/{game}/players/{playerSession}/unhide', [TrackingController::class, 'unhide'])->name('games.players.unhide');

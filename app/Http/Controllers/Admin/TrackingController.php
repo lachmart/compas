@@ -40,6 +40,28 @@ class TrackingController extends Controller
         return response()->json(['players' => $this->trackedPlayers($game)]);
     }
 
+    /**
+     * The player's walked path as [lat, lng] pairs in ping order. `after`
+     * (a ping id, the previous response's last_id) returns only newer
+     * points, so the open detail can keep the line growing cheaply.
+     */
+    public function path(Request $request, Game $game, PlayerSession $playerSession)
+    {
+        $this->authorize('view', $game);
+
+        $after = max(0, (int) $request->query('after', 0));
+
+        $pings = $playerSession->pings()
+            ->where('id', '>', $after)
+            ->orderBy('id')
+            ->get(['id', 'lat', 'lng']);
+
+        return response()->json([
+            'points' => $pings->map(fn ($ping) => [(float) $ping->lat, (float) $ping->lng])->values(),
+            'last_id' => $pings->last()?->id ?? $after,
+        ]);
+    }
+
     public function player(Game $game, PlayerSession $playerSession)
     {
         $this->authorize('view', $game);

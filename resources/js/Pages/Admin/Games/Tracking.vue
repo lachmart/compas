@@ -199,6 +199,57 @@ watch(selectedLivePlayer, (player) => {
     if (selectedPlayerId.value !== null && (!player || player.hidden)) selectedPlayerId.value = null;
 });
 
+// --- Walked path of the selected player -------------------------------------
+
+// Loaded when a player is selected, then grown with only the newer points
+// (`after`) whenever their position changes — per poll or per live ping.
+const selectedPath = ref([]);
+let pathPlayerId = null;
+let pathLastId = 0;
+// Bumped on every player switch, so a late response never lands in a newer
+// (possibly the same player's, restarted) path.
+let pathGeneration = 0;
+// Generation whose request is in flight (null = none).
+let pathInFlight = null;
+
+const loadPath = async () => {
+    const playerId = selectedPlayerId.value;
+
+    if (playerId !== pathPlayerId) {
+        pathPlayerId = playerId;
+        pathLastId = 0;
+        pathGeneration++;
+        selectedPath.value = [];
+    }
+
+    // A request for this selection is already in flight; the next position
+    // change picks up anything newer. A new selection never waits.
+    if (playerId === null || pathInFlight === pathGeneration) return;
+
+    const generation = pathGeneration;
+    pathInFlight = generation;
+
+    try {
+        const { data } = await window.axios.get(route('admin.games.players.path', [props.game.id, playerId]), {
+            params: { after: pathLastId },
+        });
+
+        // The dozor may have switched players meanwhile.
+        if (generation !== pathGeneration) return;
+
+        if (data.points.length) selectedPath.value = [...selectedPath.value, ...data.points];
+        pathLastId = data.last_id;
+    } catch (error) {
+        // The line is a nice-to-have; the next position change retries.
+        console.error('Failed to load the player path', error);
+    } finally {
+        if (pathInFlight === generation) pathInFlight = null;
+    }
+};
+
+watch(selectedPlayerId, loadPath);
+watch(() => selectedLivePlayer.value?.position, loadPath);
+
 // Ids of players with a single-player hide/unhide request in flight.
 const busyIds = ref(new Set());
 
@@ -595,6 +646,9 @@ onBeforeUnmount(() => {
                     :locations="locations"
                     :players="visiblePlayers"
                     :now="now"
+                    :path="selectedPath"
+                    :path-color="selectedLivePlayer?.color"
+                    :path-key="selectedPlayerId"
                     @select="selectedPlayerId = $event"
                 />
 
