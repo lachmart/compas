@@ -11,11 +11,12 @@ class Location extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['game_id', 'order', 'name', 'lat', 'lng', 'arrival_radius_m', 'task_type', 'task_payload'];
+    protected $fillable = ['game_id', 'order', 'name', 'lat', 'lng', 'arrival_radius_m', 'task_type', 'task_payload', 'info_title', 'info_text', 'info_images'];
 
     protected $casts = [
         'task_type' => TaskType::class,
         'task_payload' => 'array',
+        'info_images' => 'array',
         'lat' => 'decimal:7',
         'lng' => 'decimal:7',
         'order' => 'integer',
@@ -42,9 +43,26 @@ class Location extends Model
         return $this->task_payload['reference_image'] ?? null;
     }
 
-    /** Every stored file this location's task payload references. */
+    /** Accepted answers of a password task, as the dozor typed them. */
+    public function passwordAnswers(): array
+    {
+        return $this->task_payload['answers'] ?? [];
+    }
+
+    public function infoImages(): array
+    {
+        return $this->info_images ?? [];
+    }
+
+    /** Whether the player gets a text/picture board on arrival. */
+    public function hasInfo(): bool
+    {
+        return filled($this->info_title) || filled($this->info_text) || $this->infoImages() !== [];
+    }
+
+    /** Every stored file this location references (task and info board). */
     public function mediaPaths(): array
     {
-        return array_values(array_filter([...$this->images(), $this->referenceImage()]));
+        return array_values(array_filter([...$this->images(), $this->referenceImage(), ...$this->infoImages()]));
     }
 }

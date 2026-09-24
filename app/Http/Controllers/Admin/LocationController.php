@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\LocationRequest;
 use App\Models\Game;
 use App\Models\Location;
+use App\Support\PasswordAnswer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -25,6 +26,7 @@ class LocationController extends Controller
             'arrival_radius_m' => $request->validated('arrival_radius_m'),
             'task_type' => $request->validated('task_type'),
             'task_payload' => $this->buildTaskPayload($request, null),
+            ...$this->buildInfo($request),
             'order' => $game->locations()->max('order') + 1,
         ]);
 
@@ -44,6 +46,7 @@ class LocationController extends Controller
             'arrival_radius_m' => $request->validated('arrival_radius_m'),
             'task_type' => $request->validated('task_type'),
             'task_payload' => $this->buildTaskPayload($request, $location),
+            ...$this->buildInfo($request),
         ]);
 
         Storage::disk('public')->delete(array_values(array_diff($previousFiles, $location->mediaPaths())));
@@ -132,6 +135,26 @@ class LocationController extends Controller
                     ? $request->file('reference_image')->store('task-images', 'public')
                     : $location?->referenceImage(),
             ],
+            TaskType::Password => [
+                'answers' => PasswordAnswer::parseLines($request->validated('password_answers')),
+            ],
         };
+    }
+
+    /** The optional text board: kept images first, then new uploads. */
+    private function buildInfo(LocationRequest $request): array
+    {
+        $images = [
+            ...array_values($request->validated('existing_info_images', [])),
+            ...collect($request->file('info_images', []))
+                ->map(fn ($file) => $file->store('task-images', 'public'))
+                ->all(),
+        ];
+
+        return [
+            'info_title' => filled($request->validated('info_title')) ? trim($request->validated('info_title')) : null,
+            'info_text' => filled($request->validated('info_text')) ? trim($request->validated('info_text')) : null,
+            'info_images' => $images === [] ? null : $images,
+        ];
     }
 }

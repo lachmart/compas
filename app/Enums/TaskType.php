@@ -8,4 +8,5 @@ enum TaskType: string
     case PickImage = 'pick_image';
     case PhotoOfSomething = 'photo_of_something';
     case SelfieDoingSomething = 'selfie_doing_something';
+    case Password = 'password';
 }

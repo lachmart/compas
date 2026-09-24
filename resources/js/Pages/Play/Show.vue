@@ -6,6 +6,8 @@ import MapScreen from '@/Components/Play/MapScreen.vue';
 import PlayerHud from '@/Components/Play/PlayerHud.vue';
 import PickImageTask from '@/Components/Play/PickImageTask.vue';
 import PhotoTask from '@/Components/Play/PhotoTask.vue';
+import PasswordTask from '@/Components/Play/PasswordTask.vue';
+import InfoCard from '@/Components/Play/InfoCard.vue';
 import RewardOverlay from '@/Components/Play/RewardOverlay.vue';
 import FinishScreen from '@/Components/Play/FinishScreen.vue';
 import { unlockAudio } from '@/lib/feedback';
@@ -22,6 +24,10 @@ const currentIndex = ref(props.player.current_location_index);
 const finished = ref(props.player.finished_at !== null);
 const activeTask = ref(null); // { task_type, images, reference_image } once arrived
 const showingReward = ref(false);
+// The station's text board, shown right after arriving; `afterInfo` then
+// carries on to the task, the reward or the finish.
+const infoBoard = ref(null);
+let afterInfo = null;
 
 // Pings run on every screen (map, tasks, reward) from the start, not just
 // while the compass is mounted, and stop once the game is finished. The
@@ -56,6 +62,24 @@ onUnmounted(stopUnlockListeners);
 const currentLocation = computed(() => props.locations[currentIndex.value] ?? null);
 
 const onArrived = (data) => {
+    if (data.info) {
+        infoBoard.value = data.info;
+        afterInfo = () => proceedAfterArrival(data);
+
+        return;
+    }
+
+    proceedAfterArrival(data);
+};
+
+const onInfoContinue = () => {
+    const next = afterInfo;
+    afterInfo = null;
+    infoBoard.value = null;
+    next?.();
+};
+
+const proceedAfterArrival = (data) => {
     if (data.player.finished_at) {
         finished.value = true;
 
@@ -111,6 +135,15 @@ const toggleView = () => {
          stays on top of the compass, the map, tasks and the reward. -->
     <div v-else class="relative h-dvh overflow-hidden">
         <RewardOverlay v-if="showingReward" @done="onRewardDone" />
+
+        <InfoCard v-else-if="infoBoard" :info="infoBoard" @continue="onInfoContinue" />
+
+        <PasswordTask
+            v-else-if="activeTask && activeTask.task_type === 'password'"
+            :game-slug="game.slug"
+            :location-id="currentLocation.id"
+            @completed="onTaskCompleted"
+        />
 
         <PickImageTask
             v-else-if="activeTask && activeTask.task_type === 'pick_image'"

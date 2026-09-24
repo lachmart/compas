@@ -3,6 +3,7 @@ export const TASK_TYPE_LABELS = {
     pick_image: 'Vybrat obrázek',
     photo_of_something: 'Vyfotit něco',
     selfie_doing_something: 'Vyfotit se při činnosti',
+    password: 'Zadat heslo',
 };
 
 export function taskTypeLabel(type) {

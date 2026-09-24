@@ -7,12 +7,14 @@ use App\Enums\TaskType;
 use App\Events\PlayerProgressed;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Play\SubmitAnswerRequest;
+use App\Http\Requests\Play\SubmitPasswordRequest;
 use App\Http\Requests\Play\SubmitPhotoRequest;
 use App\Models\Game;
 use App\Models\Location;
 use App\Models\LocationAttempt;
 use App\Models\PlayerSession;
 use App\Support\AttemptPhotos;
+use App\Support\PasswordAnswer;
 use Illuminate\Support\Facades\Storage;
 
 class AttemptController extends Controller
@@ -46,6 +48,35 @@ class AttemptController extends Controller
             'reference_image' => in_array($location->task_type, [TaskType::PhotoOfSomething, TaskType::SelfieDoingSomething]) && $location->referenceImage()
                 ? Storage::disk('public')->url($location->referenceImage())
                 : null,
+            // The text board shown before the task; answers never leave the server.
+            'info' => $location->hasInfo() ? [
+                'title' => $location->info_title,
+                'text' => $location->info_text,
+                'images' => collect($location->infoImages())->map(fn ($path) => Storage::disk('public')->url($path))->values()->all(),
+            ] : null,
+            'player' => $this->playerState($playerSession->fresh()),
+        ]);
+    }
+
+    public function password(SubmitPasswordRequest $request, Game $game, Location $location)
+    {
+        $playerSession = $this->resolvePlayerSession($game);
+        $this->ensureCurrentTarget($playerSession, $location);
+
+        abort_unless($location->task_type === TaskType::Password, 422);
+
+        $attempt = LocationAttempt::where('player_session_id', $playerSession->id)
+            ->where('location_id', $location->id)
+            ->firstOrFail();
+
+        $correct = PasswordAnswer::matches($request->validated('answer'), $location->passwordAnswers());
+
+        if ($correct) {
+            $this->completeAttempt($attempt, $playerSession);
+        }
+
+        return response()->json([
+            'correct' => $correct,
             'player' => $this->playerState($playerSession->fresh()),
         ]);
     }

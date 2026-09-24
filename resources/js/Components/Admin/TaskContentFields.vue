@@ -102,7 +102,7 @@ const onReferenceImageChange = (files) => {
     <div v-else-if="taskType === 'photo_of_something' || taskType === 'selfie_doing_something'" class="space-y-3">
         <div>
             <p class="text-sm font-medium text-slate-700">Předloha</p>
-            <p class="mt-0.5 text-xs text-slate-500">Obrázek, který dítěti ukáže, co má vyfotit nebo udělat.</p>
+            <p class="mt-0.5 text-xs text-slate-500">Obrázek, který hráči ukáže, co má vyfotit nebo udělat.</p>
         </div>
 
         <div v-if="form.reference_image || currentReference" class="flex items-start gap-3">
@@ -128,6 +128,23 @@ const onReferenceImageChange = (files) => {
             @files="onReferenceImageChange"
         />
         <p v-if="form.errors.reference_image" class="text-sm text-red-600">{{ form.errors.reference_image }}</p>
+    </div>
+
+    <div v-else-if="taskType === 'password'" class="space-y-2">
+        <label for="location-password" class="block text-sm font-medium text-slate-700">Správné heslo</label>
+        <p class="text-xs text-slate-500">
+            Na velikosti písmen, diakritice ani mezerách nezáleží. Víc možných odpovědí napiš každou na nový řádek.
+            Nápovědu můžeš dát do textu na stanovišti.
+        </p>
+        <textarea
+            id="location-password"
+            v-model="form.password_answers"
+            rows="3"
+            maxlength="1000"
+            placeholder="např. žába"
+            class="block w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-teal-500 focus:ring-teal-500"
+        ></textarea>
+        <p v-if="form.errors.password_answers" class="text-sm text-red-600">{{ form.errors.password_answers }}</p>
     </div>
 
     <p v-else class="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">

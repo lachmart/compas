@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useForm } from '@inertiajs/vue3';
+import InfoFields from '@/Components/Admin/InfoFields.vue';
 import TaskContentFields from '@/Components/Admin/TaskContentFields.vue';
 import TaskTypePicker from '@/Components/Admin/TaskTypePicker.vue';
 import Button from '@/Components/UI/Button.vue';
@@ -27,6 +28,11 @@ const form = useForm({
     images: [],
     correct_index: props.location?.correct_index ?? null,
     reference_image: null,
+    password_answers: props.location?.password_answers ?? '',
+    info_title: props.location?.info_title ?? '',
+    info_text: props.location?.info_text ?? '',
+    existing_info_images: (props.location?.info_images ?? []).map((image) => image.path),
+    info_images: [],
 });
 
 // Lets the editor avoid discarding edits when another station is clicked on the map.
@@ -159,7 +165,7 @@ const inputClasses =
             <FormField
                 label="Název"
                 for="location-name"
-                hint="Nepovinné — dítě ho neuvidí, pomůže jen tobě."
+                hint="Nepovinné — hráč ho neuvidí, pomůže jen tobě."
                 :error="form.errors.name"
             >
                 <input
@@ -183,7 +189,7 @@ const inputClasses =
                     <label for="location-radius" class="text-sm font-medium text-slate-700">Poloměr příchodu</label>
                     <span class="text-sm font-semibold tabular-nums text-teal-800">{{ radius }} m</span>
                 </div>
-                <p class="mt-0.5 text-xs text-slate-500">Jak blízko musí dítě dojít, aby stanoviště našlo.</p>
+                <p class="mt-0.5 text-xs text-slate-500">Jak blízko musí hráč dojít, aby stanoviště našel.</p>
                 <input
                     id="location-radius"
                     v-model.number="radius"
@@ -201,6 +207,8 @@ const inputClasses =
             </div>
 
             <TaskContentFields :task-type="form.task_type" :form="form" :location="location" />
+
+            <InfoFields :form="form" :location="location" />
         </div>
 
         <div class="sticky bottom-0 flex items-center gap-2 border-t border-slate-200 bg-white p-4">

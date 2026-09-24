@@ -58,6 +58,7 @@ Route::prefix('hra/{game:slug}')->middleware('published.game')->group(function (
     Route::scopeBindings()->group(function () {
         Route::post('/locations/{location}/arrive', [AttemptController::class, 'arrive'])->middleware('throttle:play-actions')->name('play.attempts.arrive');
         Route::post('/locations/{location}/answer', [AttemptController::class, 'answer'])->middleware('throttle:play-actions')->name('play.attempts.answer');
+        Route::post('/locations/{location}/password', [AttemptController::class, 'password'])->middleware('throttle:play-actions')->name('play.attempts.password');
         Route::post('/locations/{location}/photo', [AttemptController::class, 'photo'])->middleware('throttle:play-photo')->name('play.attempts.photo');
     });
 

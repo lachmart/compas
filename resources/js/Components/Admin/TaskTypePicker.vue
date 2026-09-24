@@ -6,9 +6,10 @@ const model = defineModel({ type: String, required: true });
 
 const DESCRIPTIONS = {
     arrival_only: 'Stačí dojít na místo',
-    pick_image: 'Dítě vybere správný z 3–6 obrázků',
-    photo_of_something: 'Dítě vyfotí, co ukazuje obrázek',
+    pick_image: 'Hráč vybere správný z 3–6 obrázků',
+    photo_of_something: 'Hráč vyfotí, co ukazuje obrázek',
     selfie_doing_something: 'Selfie podle předlohy',
+    password: 'Hráč musí napsat správné heslo',
 };
 
 const options = Object.entries(TASK_TYPE_LABELS).map(([value, label]) => ({
