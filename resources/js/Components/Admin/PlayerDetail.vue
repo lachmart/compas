@@ -20,7 +20,10 @@ const props = defineProps({
     // fetched detail only refreshes on progress, so the header reads live
     // fields from here and falls back to the fetched snapshot.
     livePlayer: { type: Object, default: null },
+    // True while the parent hides/unhides this player.
+    busy: { type: Boolean, default: false },
 });
+const emit = defineEmits(['hide', 'unhide', 'delete']);
 
 const detail = ref(null);
 const loadError = ref(false);
@@ -93,6 +96,23 @@ watch(() => [props.playerId, props.version], load, { immediate: true });
                         Stanoviště {{ progressLabel(headerPlayer) }} · naposledy {{ relativeTime(headerPlayer.last_seen_at, now) }}
                     </template>
                 </p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    <Button
+                        v-if="headerPlayer.hidden"
+                        size="sm"
+                        variant="secondary"
+                        :processing="busy"
+                        @click="emit('unhide', headerPlayer)"
+                    >Zobrazit</Button>
+                    <Button
+                        v-else
+                        size="sm"
+                        variant="secondary"
+                        :processing="busy"
+                        @click="emit('hide', headerPlayer)"
+                    >Skrýt</Button>
+                    <Button size="sm" variant="danger" @click="emit('delete', headerPlayer)">Smazat</Button>
+                </div>
             </div>
         </div>
 

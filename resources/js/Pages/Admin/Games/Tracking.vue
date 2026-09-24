@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import PlayerCard from '@/Components/Admin/PlayerCard.vue';
 import PlayerDetail from '@/Components/Admin/PlayerDetail.vue';
 import SharePanel from '@/Components/Admin/SharePanel.vue';
@@ -9,8 +10,11 @@ import TrackingMap from '@/Components/Admin/TrackingMap.vue';
 import Button from '@/Components/UI/Button.vue';
 import EmptyState from '@/Components/UI/EmptyState.vue';
 import SegmentedTabs from '@/Components/UI/SegmentedTabs.vue';
+import { avatarEmoji } from '@/lib/avatars';
 import { getEcho } from '@/lib/echo';
+import { pluralize } from '@/lib/format';
 import { sortPlayers } from '@/lib/playerOrder';
+import { inactiveIds, splitPlayers } from '@/lib/playerVisibility';
 import { applyPosition, applyProgress, diffProgress, isStale, progressMessage } from '@/lib/tracking';
 
 const props = defineProps({
@@ -42,9 +46,9 @@ let socketConnection = null;
 
 const channelName = `games.${props.game.id}.tracking`;
 
-const pushToast = (message) => {
+const pushToast = (message, tone = 'info') => {
     const id = ++toastId;
-    toasts.value.push({ id, message });
+    toasts.value.push({ id, message, tone });
     setTimeout(() => {
         toasts.value = toasts.value.filter((toast) => toast.id !== id);
     }, 5000);
@@ -144,10 +148,16 @@ const connectionState = computed(() => {
 
 const selectedLivePlayer = computed(() => livePlayers.value.find((p) => p.id === selectedPlayerId.value) ?? null);
 
-const sortedPlayers = computed(() => sortPlayers(livePlayers.value, now.value));
+// livePlayers keeps hidden players too (so unhiding is instant); the list, the
+// map and the stats only ever see the visible ones.
+const playerGroups = computed(() => splitPlayers(livePlayers.value));
+const visiblePlayers = computed(() => playerGroups.value.visible);
+const hiddenPlayers = computed(() => playerGroups.value.hidden);
+
+const sortedPlayers = computed(() => sortPlayers(visiblePlayers.value, now.value));
 
 const stats = computed(() => {
-    const players = livePlayers.value;
+    const players = visiblePlayers.value;
 
     return [
         { label: 'Hráči', value: players.length },
@@ -155,6 +165,194 @@ const stats = computed(() => {
         { label: 'Dokončili', value: players.filter((p) => p.finished_at).length },
     ];
 });
+
+// --- Hiding & deleting players ----------------------------------------------
+
+const playerLabel = (player) => `${avatarEmoji(player.avatar)} ${player.nickname}`;
+
+const replacePlayer = (updated) => {
+    livePlayers.value = livePlayers.value.map((p) => (p.id === updated.id ? updated : p));
+};
+
+const removePlayers = (ids) => {
+    const gone = new Set(ids);
+    livePlayers.value = livePlayers.value.filter((p) => !gone.has(p.id));
+};
+
+// Close the detail once its player is hidden or deleted — by this page or by
+// the server state arriving over a poll.
+watch(selectedLivePlayer, (player) => {
+    if (selectedPlayerId.value !== null && (!player || player.hidden)) selectedPlayerId.value = null;
+});
+
+// Ids of players with a single-player hide/unhide request in flight.
+const busyIds = ref(new Set());
+
+const setVisibility = async (player, hide) => {
+    if (busyIds.value.has(player.id)) return;
+    busyIds.value.add(player.id);
+
+    try {
+        const routeName = hide ? 'admin.games.players.hide' : 'admin.games.players.unhide';
+        const response = await window.axios.patch(route(routeName, [props.game.id, player.id]));
+        replacePlayer(response.data.player);
+    } catch (error) {
+        console.error('Failed to change player visibility', error);
+        pushToast(
+            hide
+                ? `Hráče ${playerLabel(player)} se nepodařilo skrýt.`
+                : `Hráče ${playerLabel(player)} se nepodařilo zobrazit.`,
+            'error',
+        );
+    } finally {
+        busyIds.value.delete(player.id);
+    }
+};
+
+const hidePlayer = (player) => setVisibility(player, true);
+const unhidePlayer = (player) => setVisibility(player, false);
+
+// Selection mode (multi-select on the list).
+const selecting = ref(false);
+const checkedIds = ref(new Set());
+
+const toggleSelecting = () => {
+    selecting.value = !selecting.value;
+    checkedIds.value = new Set();
+};
+
+const toggleChecked = (id) => {
+    if (checkedIds.value.has(id)) checkedIds.value.delete(id);
+    else checkedIds.value.add(id);
+};
+
+// Only players still in the list count (others may have vanished meanwhile).
+const checkedPlayerIds = computed(() => visiblePlayers.value.filter((p) => checkedIds.value.has(p.id)).map((p) => p.id));
+
+// Leave selection mode once there is nothing left to select.
+watch(
+    () => visiblePlayers.value.length,
+    (count) => {
+        if (count === 0 && selecting.value) toggleSelecting();
+    },
+);
+
+const bulkBusy = ref(false);
+
+const runBulk = async (action, ids) => {
+    await window.axios.post(route('admin.games.players.bulk', props.game.id), { action, ids });
+
+    if (action === 'delete') {
+        removePlayers(ids);
+
+        return;
+    }
+
+    const affected = new Set(ids);
+    const hidden = action === 'hide';
+    livePlayers.value = livePlayers.value.map((p) => (affected.has(p.id) ? { ...p, hidden } : p));
+};
+
+const hideChecked = async () => {
+    const ids = checkedPlayerIds.value;
+    if (!ids.length || bulkBusy.value) return;
+
+    bulkBusy.value = true;
+    try {
+        await runBulk('hide', ids);
+        selecting.value = false;
+        checkedIds.value = new Set();
+    } catch (error) {
+        console.error('Failed to hide players', error);
+        pushToast('Vybrané hráče se nepodařilo skrýt.', 'error');
+    } finally {
+        bulkBusy.value = false;
+    }
+};
+
+// "Hide inactive" is reversible, so it runs without a confirmation.
+const inactivePlayerIds = computed(() => inactiveIds(livePlayers.value, now.value));
+const hidingInactive = ref(false);
+
+const hideInactive = async () => {
+    const ids = inactivePlayerIds.value;
+    if (!ids.length || hidingInactive.value) return;
+
+    hidingInactive.value = true;
+    try {
+        await runBulk('hide', ids);
+    } catch (error) {
+        console.error('Failed to hide inactive players', error);
+        pushToast('Neaktivní hráče se nepodařilo skrýt.', 'error');
+    } finally {
+        hidingInactive.value = false;
+    }
+};
+
+// Deleting (single or the checked ones) always goes through the dialog.
+// { kind: 'single', player } | { kind: 'bulk', ids }
+const pendingDelete = ref(null);
+const deleting = ref(false);
+const deleteError = ref(null);
+
+const askDeletePlayer = (player) => {
+    deleteError.value = null;
+    pendingDelete.value = { kind: 'single', player };
+};
+
+const askDeleteChecked = () => {
+    const ids = checkedPlayerIds.value;
+    if (!ids.length) return;
+
+    deleteError.value = null;
+    pendingDelete.value = { kind: 'bulk', ids };
+};
+
+const cancelDelete = () => {
+    if (deleting.value) return;
+    pendingDelete.value = null;
+    deleteError.value = null;
+};
+
+const deleteMessage = computed(() => {
+    const pending = pendingDelete.value;
+    if (!pending) return '';
+    if (pending.kind === 'single') return `Smazat hráče \u201E${playerLabel(pending.player)}\u201C?`;
+
+    return `Smazat ${pluralize(pending.ids.length, 'hráče', 'hráče', 'hráčů')}?`;
+});
+
+const deleteWarning = computed(() =>
+    pendingDelete.value?.kind === 'bulk'
+        ? 'Smaže se i jejich průběh a fotky. Tato akce je nevratná.'
+        : 'Smaže se i jeho průběh a fotky. Tato akce je nevratná.',
+);
+
+const confirmDelete = async () => {
+    const pending = pendingDelete.value;
+    if (!pending || deleting.value) return;
+
+    deleting.value = true;
+    deleteError.value = null;
+    try {
+        if (pending.kind === 'single') {
+            await window.axios.delete(route('admin.games.players.destroy', [props.game.id, pending.player.id]));
+            removePlayers([pending.player.id]);
+        } else {
+            await runBulk('delete', pending.ids);
+            selecting.value = false;
+            checkedIds.value = new Set();
+        }
+        pendingDelete.value = null;
+    } catch (error) {
+        console.error('Failed to delete players', error);
+        deleteError.value = 'Smazání se nepodařilo. Zkus to znovu.';
+    } finally {
+        deleting.value = false;
+    }
+};
+
+const showHidden = ref(false);
 
 const mapRef = ref(null);
 const panelEl = ref(null);
@@ -207,10 +405,14 @@ onBeforeUnmount(() => {
                         :version="detailVersion"
                         :now="now"
                         :live-player="selectedLivePlayer"
+                        :busy="busyIds.has(selectedPlayerId)"
+                        @hide="hidePlayer"
+                        @unhide="unhidePlayer"
+                        @delete="askDeletePlayer"
                     />
                 </div>
 
-                <div v-else class="space-y-5 p-5">
+                <div v-else class="space-y-5 p-5" :class="{ 'pb-0': selecting && sortedPlayers.length }">
                     <div>
                         <h1 class="break-words text-xl font-bold leading-snug text-slate-900">{{ game.name }}</h1>
 
@@ -249,21 +451,105 @@ onBeforeUnmount(() => {
                     </dl>
 
                     <section v-if="sortedPlayers.length" aria-labelledby="players-heading">
-                        <h2 id="players-heading" class="mb-2 px-1 text-sm font-semibold text-slate-800">Hráči</h2>
+                        <div class="mb-2 flex flex-wrap items-center gap-2 pl-1">
+                            <h2 id="players-heading" class="mr-auto text-sm font-semibold text-slate-800">Hráči</h2>
+                            <Button
+                                v-if="inactivePlayerIds.length && !selecting"
+                                size="sm"
+                                variant="ghost"
+                                :processing="hidingInactive"
+                                @click="hideInactive"
+                            >Skrýt neaktivní ({{ inactivePlayerIds.length }})</Button>
+                            <Button
+                                size="sm"
+                                variant="secondary"
+                                :class="{ '!bg-teal-50 !text-teal-800 !ring-teal-400': selecting }"
+                                :aria-pressed="selecting"
+                                @click="toggleSelecting"
+                            >Vybrat</Button>
+                        </div>
                         <ul class="space-y-0.5">
                             <li v-for="player in sortedPlayers" :key="player.id">
                                 <PlayerCard
                                     :player="player"
                                     :now="now"
                                     :selected="player.id === selectedPlayerId"
+                                    :selection-mode="selecting"
+                                    :checked="checkedIds.has(player.id)"
                                     @select="selectedPlayerId = $event"
+                                    @toggle="toggleChecked"
+                                    @hide="hidePlayer"
+                                    @delete="askDeletePlayer"
                                 />
                             </li>
                         </ul>
                     </section>
 
+                    <p
+                        v-else-if="hiddenPlayers.length"
+                        class="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500 ring-1 ring-slate-900/5"
+                    >
+                        Všichni hráči jsou skrytí.
+                    </p>
+
+                    <section v-if="hiddenPlayers.length" aria-labelledby="hidden-players-heading">
+                        <h2 id="hidden-players-heading">
+                            <button
+                                type="button"
+                                class="flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left text-sm font-semibold text-slate-600 transition hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                                :aria-expanded="showHidden"
+                                aria-controls="hidden-players-list"
+                                @click="showHidden = !showHidden"
+                            >
+                                <svg
+                                    class="h-4 w-4 shrink-0 transition-transform"
+                                    :class="{ 'rotate-90': showHidden }"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                    aria-hidden="true"
+                                >
+                                    <path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+                                </svg>
+                                Skrytí hráči ({{ hiddenPlayers.length }})
+                            </button>
+                        </h2>
+                        <ul v-show="showHidden" id="hidden-players-list" class="mt-1 divide-y divide-slate-100">
+                            <li v-for="player in hiddenPlayers" :key="player.id" class="flex items-center gap-3 py-1.5 pl-7">
+                                <span class="min-w-0 flex-1 truncate text-sm text-slate-600">{{ playerLabel(player) }}</span>
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    class="shrink-0"
+                                    :processing="busyIds.has(player.id)"
+                                    @click="unhidePlayer(player)"
+                                >Zobrazit</Button>
+                            </li>
+                        </ul>
+                    </section>
+
+                    <div
+                        v-if="selecting && sortedPlayers.length"
+                        class="sticky bottom-0 -mx-5 flex flex-wrap items-center gap-2 border-t border-slate-200 bg-white/95 px-5 py-3 backdrop-blur"
+                    >
+                        <p class="mr-auto text-sm font-semibold text-slate-800" aria-live="polite">Vybráno {{ checkedPlayerIds.length }}</p>
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            :processing="bulkBusy"
+                            :disabled="!checkedPlayerIds.length || bulkBusy"
+                            @click="hideChecked"
+                        >Skrýt</Button>
+                        <Button
+                            size="sm"
+                            variant="danger"
+                            :disabled="!checkedPlayerIds.length || bulkBusy"
+                            @click="askDeleteChecked"
+                        >Smazat</Button>
+                        <Button size="sm" variant="ghost" @click="toggleSelecting">Zrušit</Button>
+                    </div>
+
                     <EmptyState
-                        v-else
+                        v-if="!livePlayers.length"
                         title="Zatím se nikdo nepřipojil"
                         text="Pošli dětem odkaz nebo jim ukaž QR kód."
                     >
@@ -286,7 +572,7 @@ onBeforeUnmount(() => {
                 <TrackingMap
                     ref="mapRef"
                     :locations="locations"
-                    :players="livePlayers"
+                    :players="visiblePlayers"
                     :now="now"
                     @select="selectedPlayerId = $event"
                 />
@@ -302,7 +588,7 @@ onBeforeUnmount(() => {
                 </div>
 
                 <button
-                    v-if="locations.length || livePlayers.length"
+                    v-if="locations.length || visiblePlayers.length"
                     type="button"
                     class="absolute right-3 top-3 z-[1000] flex h-[34px] w-[34px] items-center justify-center rounded-lg bg-white text-slate-600 shadow ring-1 ring-slate-900/15 transition hover:bg-slate-50 hover:text-teal-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
                     title="Zobrazit vše"
@@ -320,10 +606,22 @@ onBeforeUnmount(() => {
             <div
                 v-for="toast in toasts"
                 :key="toast.id"
-                class="rounded-xl border-l-4 border-teal-500 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-lg ring-1 ring-slate-900/10"
+                class="rounded-xl border-l-4 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-lg ring-1 ring-slate-900/10"
+                :class="toast.tone === 'error' ? 'border-red-500' : 'border-teal-500'"
+                :role="toast.tone === 'error' ? 'alert' : undefined"
             >
                 {{ toast.message }}
             </div>
         </div>
+
+        <ConfirmDialog
+            :show="pendingDelete !== null"
+            :message="deleteMessage"
+            :warning="deleteWarning"
+            :error="deleteError"
+            :processing="deleting"
+            @confirm="confirmDelete"
+            @cancel="cancelDelete"
+        />
     </AuthenticatedLayout>
 </template>
