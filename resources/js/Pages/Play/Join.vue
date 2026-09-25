@@ -2,8 +2,10 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
+import PermissionsSheet from '@/Components/Play/PermissionsSheet.vue';
 import { AVATARS } from '@/lib/avatars';
 import { unlockAudio } from '@/lib/feedback';
+import { setCameraPreference } from '@/lib/cameraPreference';
 import { requestOrientationPermission } from '@/lib/orientationPermission';
 
 const props = defineProps({
@@ -64,6 +66,9 @@ const pick = (key) => {
     hint.value = null;
 };
 
+// ▶ first explains the permissions; the sheet's buttons then ask for them.
+const askingPermissions = ref(false);
+
 const play = () => {
     // Unlock sound for the whole game inside this tap (iOS gesture rule).
     unlockAudio();
@@ -76,14 +81,45 @@ const play = () => {
         return;
     }
 
-    // Both prompts must start inside this click handler: iOS only asks for
-    // the compass permission during a user gesture. Don't await — the game
-    // screen picks the result up from the shared permission state.
+    askingPermissions.value = true;
+};
+
+// The camera is only asked for now, never by surprise later: a refusal (or
+// "without camera") is remembered and the AR view keeps its plain background.
+const askForCamera = () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+        setCameraPreference('declined');
+
+        return;
+    }
+
+    navigator.mediaDevices
+        .getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false })
+        .then((stream) => {
+            stream.getTracks().forEach((track) => track.stop());
+            setCameraPreference('granted');
+        })
+        .catch(() => setCameraPreference('declined'));
+};
+
+const startGame = (withCamera) => {
+    unlockAudio();
+    askingPermissions.value = false;
+
+    // All prompts must start inside this tap: iOS only asks for the compass
+    // permission during a user gesture. Don't await — the game screen picks
+    // the results up from the shared permission state.
     requestOrientationPermission();
     navigator.geolocation?.getCurrentPosition(
         () => {},
         () => {},
     );
+
+    if (withCamera) {
+        askForCamera();
+    } else {
+        setCameraPreference('declined');
+    }
 
     form.post(route('play.join', props.game.slug), {
         onError: (errors) => {
@@ -199,6 +235,8 @@ const play = () => {
                 </svg>
             </button>
         </form>
+
+        <PermissionsSheet v-if="askingPermissions" @start="startGame" @close="askingPermissions = false" />
     </div>
 </template>
 

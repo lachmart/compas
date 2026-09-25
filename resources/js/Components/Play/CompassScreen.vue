@@ -4,6 +4,7 @@ import { arrowRotationDegrees, bearingDegrees, distanceMeters } from '@/lib/geo'
 import { aimTarget, cameraHeading, nextPosture, smoothAngle } from '@/lib/orientation';
 import { HEAT_LEVELS, heatGradient, heatLevel } from '@/lib/proximity';
 import { isSessionGone, reloadForGoneSession } from '@/lib/playSession';
+import { cameraPreference } from '@/lib/cameraPreference';
 import { useSensors } from '@/lib/useSensors';
 import ArAim from '@/Components/Play/ArAim.vue';
 import ArrivalRing from '@/Components/Play/ArrivalRing.vue';
@@ -71,8 +72,9 @@ watch([arMode, cameraDirection, bearing], () => {
     aim.value = arMode.value ? aimTarget(bearing.value, cameraDirection.value, aim.value?.aligned ?? false) : null;
 });
 
-// A refused or missing camera isn't asked for again on every tilt.
-const cameraUnavailable = ref(false);
+// A refused or missing camera isn't asked for again on every tilt, and a
+// player who chose "without camera" on the join screen is never asked.
+const cameraUnavailable = ref(cameraPreference() === 'declined');
 
 // Hot/cold background: one layer per heat level, crossfaded by opacity
 // (gradients themselves can't be CSS-transitioned).
