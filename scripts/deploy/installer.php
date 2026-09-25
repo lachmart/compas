@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Contracts\Console\Kernel;
+
 // One-shot installer for hosting without SSH. deploy.sh uploads it under a
 // random name next to release.zip, calls it once over HTTPS and it deletes
 // itself (and the zip) whatever happens.
@@ -59,7 +61,7 @@ echo "extracted\n";
 
 require $root.'/vendor/autoload.php';
 $app = require $root.'/bootstrap/app.php';
-$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel = $app->make(Kernel::class);
 $kernel->bootstrap();
 
 // migrate first: optimize:clear empties the database cache store, whose

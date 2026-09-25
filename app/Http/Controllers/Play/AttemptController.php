@@ -15,7 +15,6 @@ use App\Models\LocationAttempt;
 use App\Models\PlayerSession;
 use App\Support\AttemptPhotos;
 use App\Support\PasswordAnswer;
-use Illuminate\Support\Facades\Storage;
 
 class AttemptController extends Controller
 {
@@ -42,18 +41,12 @@ class AttemptController extends Controller
         return response()->json([
             'attempt_status' => $attempt->fresh()->status->value,
             'task_type' => $location->task_type->value,
-            'images' => $location->task_type === TaskType::PickImage
-                ? collect($location->images())->map(fn ($path) => Storage::disk('public')->url($path))->values()->all()
-                : null,
-            'reference_image' => in_array($location->task_type, [TaskType::PhotoOfSomething, TaskType::SelfieDoingSomething]) && $location->referenceImage()
-                ? Storage::disk('public')->url($location->referenceImage())
+            'images' => $location->task_type === TaskType::PickImage ? Location::publicUrls($location->images()) : null,
+            'reference_image' => $location->task_type->isPhoto() && $location->referenceImage()
+                ? Location::publicUrls([$location->referenceImage()])[0]
                 : null,
             // The text board shown before the task; answers never leave the server.
-            'info' => $location->hasInfo() ? [
-                'title' => $location->info_title,
-                'text' => $location->info_text,
-                'images' => collect($location->infoImages())->map(fn ($path) => Storage::disk('public')->url($path))->values()->all(),
-            ] : null,
+            'info' => $location->infoBoard(),
             'player' => $this->playerState($playerSession->fresh()),
         ]);
     }
@@ -109,10 +102,7 @@ class AttemptController extends Controller
         $playerSession = $this->resolvePlayerSession($game);
         $this->ensureCurrentTarget($playerSession, $location);
 
-        abort_unless(
-            in_array($location->task_type, [TaskType::PhotoOfSomething, TaskType::SelfieDoingSomething]),
-            422,
-        );
+        abort_unless($location->task_type->isPhoto(), 422);
 
         $attempt = LocationAttempt::where('player_session_id', $playerSession->id)
             ->where('location_id', $location->id)

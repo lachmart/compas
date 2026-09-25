@@ -11,7 +11,7 @@ class GameFactory extends Factory
 {
     public function definition(): array
     {
-        $name = fake()->word() . ' ' . fake()->word() . ' ' . fake()->word();
+        $name = fake()->word().' '.fake()->word().' '.fake()->word();
 
         return [
             'owner_id' => User::factory(),

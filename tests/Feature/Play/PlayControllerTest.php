@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Avatar;
 use App\Enums\GameStatus;
 use App\Models\Game;
 use App\Models\Location;
@@ -48,7 +49,7 @@ test('a player joins by picking an animal, the name is optional', function () {
     $this->post(route('play.join', $game->slug), ['avatar' => 'owl'])->assertRedirect();
 
     $session = PlayerSession::first();
-    expect($session->avatar)->toBe(\App\Enums\Avatar::Owl)
+    expect($session->avatar)->toBe(Avatar::Owl)
         ->and($session->nickname)->toBe('Sova');
 });
 

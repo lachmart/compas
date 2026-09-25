@@ -26,7 +26,7 @@ beforeEach(function () {
 test('hidden_at cannot be set through mass assignment', function () {
     // Factories create through Model::unguarded(), so this bypasses them and
     // calls fill() directly — the same guard a controller would hit.
-    $player = new PlayerSession();
+    $player = new PlayerSession;
     $player->fill([
         'game_id' => $this->game->id,
         'nickname' => 'Anna',

@@ -11,7 +11,6 @@ use App\Models\Game;
 use App\Models\LocationAttempt;
 use App\Models\PlayerSession;
 use App\Support\AttemptPhotos;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class PlayController extends Controller
@@ -77,9 +76,7 @@ class PlayController extends Controller
             $entries[] = [
                 'id' => $location->id,
                 'position' => $index + 1,
-                'title' => $location->info_title,
-                'text' => $location->info_text,
-                'images' => collect($location->infoImages())->map(fn ($path) => Storage::disk('public')->url($path))->values()->all(),
+                ...($location->infoBoard() ?? ['title' => null, 'text' => null, 'images' => []]),
                 'photo' => $hasPhoto ? route('play.photo', [$game->slug, $attempt]) : null,
             ];
         }

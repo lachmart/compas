@@ -6,7 +6,6 @@ use App\Events\PlayerProgressed;
 use App\Models\Game;
 use App\Models\Location;
 use App\Models\PlayerSession;
-use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Support\Facades\Event;
 
 beforeEach(function () {
