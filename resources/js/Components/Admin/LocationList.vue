@@ -1,8 +1,9 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import TaskTypeIcon from '@/Components/Admin/TaskTypeIcon.vue';
 import Button from '@/Components/UI/Button.vue';
+import { formatDistance, routeLegs } from '@/lib/routeDistance';
 import { locationLabel, taskTypeLabel } from '@/lib/taskTypes';
 
 const props = defineProps({
@@ -13,6 +14,9 @@ const props = defineProps({
     locked: { type: Boolean, default: false },
 });
 const emit = defineEmits(['select', 'add']);
+
+// Straight-line distances between consecutive stations and in total.
+const route = computed(() => routeLegs(props.locations));
 
 const draggedId = ref(null);
 const dropTargetId = ref(null);
@@ -47,60 +51,72 @@ const onDrop = (targetLocation) => {
             <h2 id="locations-heading" class="text-sm font-semibold text-slate-800">Stanoviště</h2>
             <p v-if="locations.length > 1 && !locked" class="text-xs text-slate-400">Pořadí změníš přetažením</p>
         </div>
+        <p v-if="locations.length > 1" class="mb-2 px-1 text-xs text-slate-500">
+            Celkem vzdušnou čarou <span class="font-semibold tabular-nums text-slate-700">{{ formatDistance(route.total) }}</span>
+        </p>
 
         <ol v-if="locations.length" class="space-y-0.5">
-            <li
-                v-for="(location, index) in locations"
-                :key="location.id"
-                :draggable="!locked"
-                class="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 transition"
-                :class="[
-                    location.id === selectedId ? 'bg-orange-50 ring-1 ring-orange-200' : 'hover:bg-slate-50',
-                    draggedId === location.id ? 'opacity-40' : '',
-                    dropTargetId === location.id && draggedId !== location.id ? 'ring-2 ring-teal-400' : '',
-                ]"
-                @click="emit('select', location.id)"
-                @dragstart="onDragStart(location)"
-                @dragend="onDragEnd"
-                @dragover.prevent="onDragOver(location)"
-                @drop.prevent="onDrop(location)"
-            >
-                <span
-                    v-if="!locked"
-                    class="-ml-1 cursor-grab text-slate-300 transition group-hover:text-slate-500 active:cursor-grabbing"
-                    title="Přetáhni pro změnu pořadí"
-                    aria-hidden="true"
+            <template v-for="(location, index) in locations" :key="location.id">
+                <!-- Leg from the previous station, as the crow flies. -->
+                <li
+                    v-if="index > 0"
+                    class="flex items-center gap-1.5 py-0.5 text-[11px] tabular-nums text-slate-400"
+                    :class="locked ? 'pl-[1.4rem]' : 'pl-[2.6rem]'"
                 >
-                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <circle cx="7" cy="5" r="1.4" /><circle cx="13" cy="5" r="1.4" />
-                        <circle cx="7" cy="10" r="1.4" /><circle cx="13" cy="10" r="1.4" />
-                        <circle cx="7" cy="15" r="1.4" /><circle cx="13" cy="15" r="1.4" />
-                    </svg>
-                </span>
-
-                <span
-                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white shadow-sm ring-2 ring-white"
-                    :class="location.id === selectedId ? 'bg-orange-500' : 'bg-teal-600'"
+                    <svg class="h-3 w-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6 1v10M3 8l3 3 3-3" /></svg>
+                    <span><span class="sr-only">Vzdálenost od předchozího: </span>{{ formatDistance(route.legs[index - 1]) }}</span>
+                </li>
+                <li
+                    :draggable="!locked"
+                    class="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 transition"
+                    :class="[
+                        location.id === selectedId ? 'bg-orange-50 ring-1 ring-orange-200' : 'hover:bg-slate-50',
+                        draggedId === location.id ? 'opacity-40' : '',
+                        dropTargetId === location.id && draggedId !== location.id ? 'ring-2 ring-teal-400' : '',
+                    ]"
+                    @click="emit('select', location.id)"
+                    @dragstart="onDragStart(location)"
+                    @dragend="onDragEnd"
+                    @dragover.prevent="onDragOver(location)"
+                    @drop.prevent="onDrop(location)"
                 >
-                    {{ index + 1 }}
-                </span>
-
-                <button
-                    type="button"
-                    class="min-w-0 flex-1 text-left focus:outline-none focus-visible:underline"
-                    @click.stop="emit('select', location.id)"
-                >
-                    <span class="block truncate text-sm font-medium text-slate-900">{{ locationLabel(location, index + 1) }}</span>
-                    <span class="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
-                        <TaskTypeIcon :type="location.task_type" class="h-3.5 w-3.5 shrink-0" />
-                        {{ taskTypeLabel(location.task_type) }}
+                    <span
+                        v-if="!locked"
+                        class="-ml-1 cursor-grab text-slate-300 transition group-hover:text-slate-500 active:cursor-grabbing"
+                        title="Přetáhni pro změnu pořadí"
+                        aria-hidden="true"
+                    >
+                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <circle cx="7" cy="5" r="1.4" /><circle cx="13" cy="5" r="1.4" />
+                            <circle cx="7" cy="10" r="1.4" /><circle cx="13" cy="10" r="1.4" />
+                            <circle cx="7" cy="15" r="1.4" /><circle cx="13" cy="15" r="1.4" />
+                        </svg>
                     </span>
-                </button>
 
-                <svg class="h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-slate-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
-                </svg>
-            </li>
+                    <span
+                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white shadow-sm ring-2 ring-white"
+                        :class="location.id === selectedId ? 'bg-orange-500' : 'bg-teal-600'"
+                    >
+                        {{ index + 1 }}
+                    </span>
+
+                    <button
+                        type="button"
+                        class="min-w-0 flex-1 text-left focus:outline-none focus-visible:underline"
+                        @click.stop="emit('select', location.id)"
+                    >
+                        <span class="block truncate text-sm font-medium text-slate-900">{{ locationLabel(location, index + 1) }}</span>
+                        <span class="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
+                            <TaskTypeIcon :type="location.task_type" class="h-3.5 w-3.5 shrink-0" />
+                            {{ taskTypeLabel(location.task_type) }}
+                        </span>
+                    </button>
+
+                    <svg class="h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-slate-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+                    </svg>
+                </li>
+            </template>
         </ol>
 
         <p v-else class="rounded-xl bg-slate-50 px-4 py-5 text-center text-sm text-slate-500">
