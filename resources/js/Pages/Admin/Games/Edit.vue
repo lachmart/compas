@@ -50,17 +50,24 @@ const mapHint = computed(() => {
     return null;
 });
 
-const openLocation = (id) => {
-    if (id === state.value.selectedId) return;
+// Leaving the open form (another station, or a new one) would drop its
+// unsaved changes: ask first (save / discard / stay). `action` runs once
+// the way is clear.
+const pendingAction = ref(null);
 
-    // Opening another location would drop unsaved changes in the open
-    // form: ask first (save / discard / stay).
+const leaveFormThen = (action) => {
     if (hasUnsavedChanges(state.value, selectedLocation.value, Boolean(formRef.value?.isDirty()))) {
-        pendingSwitchId.value = id;
+        pendingAction.value = action;
         return;
     }
 
-    switchTo(id);
+    action();
+};
+
+const openLocation = (id) => {
+    if (id === state.value.selectedId) return;
+
+    leaveFormThen(() => switchTo(id));
 };
 
 const switchTo = (id) => {
@@ -72,27 +79,29 @@ const switchTo = (id) => {
 };
 
 const startAdding = () => {
-    state.value = addState();
+    // Already adding: keep the new station being placed.
+    if (state.value.panel === 'add') return;
+
+    leaveFormThen(() => {
+        state.value = addState();
+    });
 };
 
 const backToList = () => {
     state.value = listState();
 };
 
-// Station the dozor clicked while the open form had unsaved changes.
-const pendingSwitchId = ref(null);
-
-const saveAndSwitch = () => {
-    const id = pendingSwitchId.value;
-    pendingSwitchId.value = null;
+const saveAndContinue = () => {
+    const action = pendingAction.value;
+    pendingAction.value = null;
     // On validation errors the form stays open and shows them.
-    formRef.value?.save(() => switchTo(id));
+    formRef.value?.save(action);
 };
 
-const discardAndSwitch = () => {
-    const id = pendingSwitchId.value;
-    pendingSwitchId.value = null;
-    switchTo(id);
+const discardAndContinue = () => {
+    const action = pendingAction.value;
+    pendingAction.value = null;
+    action();
 };
 
 // GameMap only reports { lat, lng }; keep the radius.
@@ -216,6 +225,19 @@ const confirmDelete = () => {
                     </p>
                 </div>
 
+                <!-- Always at hand: add a station from any panel. -->
+                <button
+                    v-if="state.panel !== 'add'"
+                    type="button"
+                    class="absolute bottom-4 left-3 z-[1000] inline-flex items-center gap-1.5 rounded-full bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg ring-2 ring-white transition hover:bg-teal-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-teal-300"
+                    @click="startAdding"
+                >
+                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+                    </svg>
+                    Přidat stanoviště
+                </button>
+
                 <button
                     v-if="locations.length"
                     type="button"
@@ -231,14 +253,14 @@ const confirmDelete = () => {
             </div>
         </div>
 
-        <Modal :show="pendingSwitchId !== null" max-width="md" @close="pendingSwitchId = null">
+        <Modal :show="pendingAction !== null" max-width="md" @close="pendingAction = null">
             <div class="space-y-4 p-6">
                 <p class="font-semibold text-slate-900">Stanoviště má neuložené změny</p>
-                <p class="text-sm text-slate-600">Chceš je před přepnutím na jiné stanoviště uložit, nebo zahodit?</p>
+                <p class="text-sm text-slate-600">Chceš je uložit, nebo zahodit, než budeš pokračovat?</p>
                 <div class="flex flex-wrap justify-end gap-3">
-                    <Button variant="ghost" type="button" @click="pendingSwitchId = null">Zůstat</Button>
-                    <Button variant="secondary" type="button" class="!text-red-600" @click="discardAndSwitch">Zahodit změny</Button>
-                    <Button type="button" @click="saveAndSwitch">Uložit a přepnout</Button>
+                    <Button variant="ghost" type="button" @click="pendingAction = null">Zůstat</Button>
+                    <Button variant="secondary" type="button" class="!text-red-600" @click="discardAndContinue">Zahodit změny</Button>
+                    <Button type="button" @click="saveAndContinue">Uložit a pokračovat</Button>
                 </div>
             </div>
         </Modal>
