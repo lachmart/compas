@@ -1,13 +1,13 @@
 import { describe, expect, test } from 'vitest';
 import {
-    childMapScene,
+    playerMapScene,
     currentStationIcon,
     doneStationIcon,
     futureStationIcon,
     playerIcon,
     stationIcon,
     stationState,
-} from './childMapMarkers';
+} from './playerMapMarkers';
 
 const fakeL = { divIcon: (options) => options };
 
@@ -32,9 +32,9 @@ const locations = [
     { id: 12, lat: 50.2, lng: 14.2 },
 ];
 
-describe('childMapScene', () => {
+describe('playerMapScene', () => {
     test('marks stations before currentIndex as done, the target as current, the rest as future', () => {
-        const scene = childMapScene({ locations, currentIndex: 1 });
+        const scene = playerMapScene({ locations, currentIndex: 1 });
         expect(scene).toEqual([
             { id: 10, lat: 50, lng: 14, state: 'done' },
             { id: 11, lat: 50.1, lng: 14.1, state: 'current' },
@@ -43,7 +43,7 @@ describe('childMapScene', () => {
     });
 
     test('currentIndex 0 has no done stations yet', () => {
-        expect(childMapScene({ locations, currentIndex: 0 }).map((s) => s.state)).toEqual([
+        expect(playerMapScene({ locations, currentIndex: 0 }).map((s) => s.state)).toEqual([
             'current',
             'future',
             'future',
@@ -51,7 +51,7 @@ describe('childMapScene', () => {
     });
 
     test('an empty route is an empty scene', () => {
-        expect(childMapScene({ locations: [], currentIndex: 0 })).toEqual([]);
+        expect(playerMapScene({ locations: [], currentIndex: 0 })).toEqual([]);
     });
 });
 
@@ -79,7 +79,7 @@ describe('station icons', () => {
     });
 
     test('current icon is a pulsing marker', () => {
-        expect(currentStationIcon(fakeL).html).toContain('child-station-current__pulse');
+        expect(currentStationIcon(fakeL).html).toContain('play-station-current__pulse');
     });
 
     test('future icon has no number', () => {
@@ -88,8 +88,8 @@ describe('station icons', () => {
     });
 
     test('stationIcon dispatches by state', () => {
-        expect(stationIcon(fakeL, 'done').html).toContain('child-station-done');
-        expect(stationIcon(fakeL, 'current').html).toContain('child-station-current');
-        expect(stationIcon(fakeL, 'future').html).toContain('child-station-future');
+        expect(stationIcon(fakeL, 'done').html).toContain('play-station-done');
+        expect(stationIcon(fakeL, 'current').html).toContain('play-station-current');
+        expect(stationIcon(fakeL, 'future').html).toContain('play-station-future');
     });
 });

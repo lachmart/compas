@@ -88,7 +88,7 @@ onUnmounted(() => {
                 <img :src="referenceImage" alt="" class="aspect-square w-full rounded object-cover" draggable="false" />
             </div>
 
-            <!-- The child's own photo while it uploads / once accepted. -->
+            <!-- The player's own photo while it uploads / once accepted. -->
             <div
                 v-if="preview && (submitting || uploaded)"
                 class="relative w-40 rotate-3 rounded-lg bg-white p-2 pb-6 shadow-2xl motion-safe:animate-pop"

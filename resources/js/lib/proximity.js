@@ -1,4 +1,4 @@
-// "Hot and cold" for the compass screen: how close the child is to the
+// "Hot and cold" for the compass screen: how close the player is to the
 // target, as a level from 0 (far, cold blue) to 5 (right there, hot red).
 
 export const HEAT_LEVELS = 5;

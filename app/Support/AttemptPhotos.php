@@ -8,7 +8,7 @@ use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Children's task photos: kept on the private disk (never a public URL —
+ * Players' task photos: kept on the private disk (never a public URL —
  * the dozor sees them through an authorised route) and always re-encoded,
  * which drops EXIF/GPS metadata and caps the size.
  */

@@ -5,7 +5,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
-// Children's photos used to be stored on the public disk (reachable by URL
+// Players' photos used to be stored on the public disk (reachable by URL
 // without login) with their original EXIF data. Move each one to the private
 // disk, re-encoded without metadata, and delete the public copy.
 return new class extends Migration

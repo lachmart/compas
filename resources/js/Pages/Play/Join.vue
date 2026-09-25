@@ -10,14 +10,14 @@ import { requestOrientationPermission } from '@/lib/orientationPermission';
 
 const props = defineProps({
     game: Object,
-    // Animals other children in this game already have; shown faded and
+    // Animals other players in this game already have; shown faded and
     // not pickable. Refreshed while the screen is open.
     taken_avatars: { type: Array, default: () => [] },
 });
 
 const isTaken = (key) => props.taken_avatars.includes(key);
 
-// Another child may grab an animal while this screen is open.
+// Another player may grab an animal while this screen is open.
 const TAKEN_REFRESH_MS = 5000;
 let refreshTimer = null;
 

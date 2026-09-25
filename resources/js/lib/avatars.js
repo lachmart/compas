@@ -1,4 +1,4 @@
-// Single source of truth for the child-facing animal avatars (JS side).
+// Single source of truth for the player animal avatars (JS side).
 // Keep in lockstep with the PHP enum App\Enums\Avatar (same keys, same
 // order). Emoji are written as \u{...} escapes because a previous tool pass
 // normalised raw non-ASCII characters in this repo — escapes survive that.

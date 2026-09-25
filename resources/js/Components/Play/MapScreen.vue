@@ -3,11 +3,11 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useSensors } from '@/lib/useSensors';
-import { childMapScene, playerIcon, stationIcon } from '@/lib/childMapMarkers';
+import { playerMapScene, playerIcon, stationIcon } from '@/lib/playerMapMarkers';
 
 const props = defineProps({
     locations: { type: Array, required: true },
-    // Index (0-based) of the station the child is heading to now; earlier
+    // Index (0-based) of the station the player is heading to now; earlier
     // stations render as done, later ones as future. Stays in lockstep with
     // PlayerHud's `current`/`completed` props.
     currentIndex: { type: Number, required: true },
@@ -25,7 +25,7 @@ let trailLine;
 const markersByLocationId = new Map();
 
 const drawStationMarkers = () => {
-    childMapScene({ locations: props.locations, currentIndex: props.currentIndex }).forEach((station) => {
+    playerMapScene({ locations: props.locations, currentIndex: props.currentIndex }).forEach((station) => {
         const marker = L.marker([station.lat, station.lng], {
             icon: stationIcon(L, station.state),
             keyboard: false,
@@ -38,7 +38,7 @@ const drawStationMarkers = () => {
 const FRAME_OPTIONS = { paddingTopLeft: [40, 120], paddingBottomRight: [40, 120], maxZoom: 18, animate: false };
 
 onMounted(() => {
-    // Start on the station the child is heading to, not the first one.
+    // Start on the station the player is heading to, not the first one.
     const start = props.locations[props.currentIndex] ?? props.locations[0];
     // The zoom control defaults to the top-left, right under the HUD's
     // avatar bubble; moved to the bottom-left, clear of both the HUD and the
@@ -67,7 +67,7 @@ onBeforeUnmount(() => map?.remove());
 watch(
     () => props.currentIndex,
     () => {
-        childMapScene({ locations: props.locations, currentIndex: props.currentIndex }).forEach((station) => {
+        playerMapScene({ locations: props.locations, currentIndex: props.currentIndex }).forEach((station) => {
             markersByLocationId.get(station.id)?.setIcon(stationIcon(L, station.state));
         });
     },
@@ -102,7 +102,7 @@ watch(position, updatePlayer);
 
 <template>
     <div class="relative h-dvh w-full">
-        <div ref="mapEl" class="child-map h-full w-full"></div>
+        <div ref="mapEl" class="play-map h-full w-full"></div>
         <button
             v-if="geoError"
             type="button"
@@ -120,20 +120,20 @@ watch(position, updatePlayer);
    never match them here — kept global and uniquely prefixed instead. */
 /* Leaflet's zoom buttons, sized for small fingers (>= 56 px) and lifted
    above the home indicator, level with the map/compass toggle. */
-.child-map .leaflet-bar a,
-.child-map .leaflet-bar a:hover {
+.play-map .leaflet-bar a,
+.play-map .leaflet-bar a:hover {
     width: 56px;
     height: 56px;
     line-height: 56px;
     font-size: 28px;
 }
 
-.child-map .leaflet-bottom.leaflet-left .leaflet-control-zoom {
+.play-map .leaflet-bottom.leaflet-left .leaflet-control-zoom {
     margin-left: 20px;
     margin-bottom: max(1.5rem, env(safe-area-inset-bottom));
 }
 
-.child-player-marker__bubble {
+.play-player-marker__bubble {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -147,7 +147,7 @@ watch(position, updatePlayer);
     border: 3px solid #fff;
 }
 
-.child-station-done {
+.play-station-done {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -159,14 +159,14 @@ watch(position, updatePlayer);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
-.child-station-current {
+.play-station-current {
     position: relative;
     display: block;
     width: 46px;
     height: 46px;
 }
 
-.child-station-current__dot {
+.play-station-current__dot {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -179,7 +179,7 @@ watch(position, updatePlayer);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
-.child-station-current__pulse {
+.play-station-current__pulse {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -188,10 +188,10 @@ watch(position, updatePlayer);
     margin: -11px 0 0 -11px;
     border-radius: 9999px;
     background: rgba(249, 115, 22, 0.45);
-    animation: child-station-pulse 1.6s ease-out infinite;
+    animation: play-station-pulse 1.6s ease-out infinite;
 }
 
-@keyframes child-station-pulse {
+@keyframes play-station-pulse {
     0% {
         transform: scale(0.7);
         opacity: 0.8;
@@ -203,13 +203,13 @@ watch(position, updatePlayer);
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .child-station-current__pulse {
+    .play-station-current__pulse {
         animation: none;
         opacity: 0.35;
     }
 }
 
-.child-station-future {
+.play-station-future {
     width: 14px;
     height: 14px;
     border-radius: 9999px;

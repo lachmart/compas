@@ -32,7 +32,7 @@ test('the join page lists animals held by active players of this game', function
             ->where('taken_avatars', ['fox']));
 });
 
-test('a child cannot join with an animal another active player has', function () {
+test('a player cannot join with an animal another active player has', function () {
     playerWith($this->game, Avatar::Fox);
 
     $this->post(route('play.join', $this->game->slug), ['avatar' => 'fox'])

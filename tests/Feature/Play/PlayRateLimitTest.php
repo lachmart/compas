@@ -38,10 +38,10 @@ test('before joining, a browser is limited by its session and its network', func
     ]);
 });
 
-test('children on one shared network are not limited by each other', function () {
-    foreach (PlayerSession::factory()->count(5)->create(['game_id' => $this->game->id]) as $child) {
+test('players on one shared network are not limited by each other', function () {
+    foreach (PlayerSession::factory()->count(5)->create(['game_id' => $this->game->id]) as $player) {
         for ($i = 0; $i < 10; $i++) {
-            $this->withSession(['player_session_id' => $child->id])
+            $this->withSession(['player_session_id' => $player->id])
                 ->postJson(route('play.pings.store', $this->game->slug), ['lat' => 50, 'lng' => 14])
                 ->assertNoContent();
         }

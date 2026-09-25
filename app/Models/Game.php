@@ -38,7 +38,7 @@ class Game extends Model
 
     /**
      * Deletes the game (locations, players, attempts and pings cascade) and
-     * then its files: the dozor's task images and the children's photos.
+     * then its files: the dozor's task images and the players' photos.
      */
     public function deleteWithFiles(): void
     {
@@ -55,9 +55,9 @@ class Game extends Model
 
     /**
      * Animals held by players still in the game (not hidden, not finished,
-     * seen within PlayerSession::INACTIVE_AFTER_MINUTES), so two children
+     * seen within PlayerSession::INACTIVE_AFTER_MINUTES), so two players
      * never pick the same one. When all are held, none count as taken —
-     * a ninth child must still be able to join.
+     * a ninth player must still be able to join.
      *
      * @return list<string>
      */

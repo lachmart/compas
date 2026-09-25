@@ -107,13 +107,13 @@ test('submitting a photo completes a photo_of_something attempt', function () {
 
     $response = $this->withSession(['player_session_id' => $session->id])
         ->post(route('play.attempts.photo', [$game->slug, $loc->id]), [
-            'photo' => UploadedFile::fake()->image('kids-photo.jpg'),
+            'photo' => UploadedFile::fake()->image('player-photo.jpg'),
         ]);
 
     $response->assertOk();
     $attempt = LocationAttempt::first();
     expect($attempt->status)->toBe(AttemptStatus::Completed);
-    // Children's photos are private and re-encoded, never public files.
+    // Players' photos are private and re-encoded, never public files.
     Storage::disk('local')->assertExists($attempt->submitted_photo_path);
     Storage::disk('public')->assertMissing($attempt->submitted_photo_path);
     expect(Storage::disk('public')->allFiles())->toBe([]);

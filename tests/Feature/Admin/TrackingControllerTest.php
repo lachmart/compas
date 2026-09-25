@@ -61,7 +61,7 @@ test('player detail lists attempts with times and photo urls', function () {
         ->assertJsonPath('attempts.1.photo_url', route('admin.games.players.attempts.photo', [$this->game, $session, LocationAttempt::where('location_id', $this->second->id)->first()]));
 });
 
-test('the owner gets a child\'s photo through the protected route', function () {
+test('the owner gets a player\'s photo through the protected route', function () {
     Storage::fake('local');
     Storage::disk('local')->put('attempt-photos/x.jpg', 'jpeg-bytes');
     $session = PlayerSession::factory()->create(['game_id' => $this->game->id]);
@@ -251,7 +251,7 @@ test('tracking exposes location names', function () {
         ->assertJsonPath('attempts.0.location_name', 'Studánka');
 });
 
-test('tracking exposes the kids play url and game status for the empty state', function () {
+test('tracking exposes the play url for players and game status for the empty state', function () {
     $this->actingAs($this->owner)->get(route('admin.games.tracking', $this->game))
         ->assertOk()
         ->assertInertia(fn ($page) => $page

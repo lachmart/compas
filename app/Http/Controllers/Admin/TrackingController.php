@@ -91,7 +91,7 @@ class TrackingController extends Controller
         ]);
     }
 
-    /** A child's task photo — only ever served to the game's dozor. */
+    /** A player's task photo — only ever served to the game's dozor. */
     public function photo(Game $game, PlayerSession $playerSession, LocationAttempt $attempt)
     {
         $this->authorize('view', $game);

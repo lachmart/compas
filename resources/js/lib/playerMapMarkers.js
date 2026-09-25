@@ -13,7 +13,7 @@ export function stationState(index, currentIndex) {
 // Locations paired with their marker state, in game order. Pure data (no
 // Leaflet) so it can be unit-tested without a map; MapScreen turns each
 // entry into a marker with the matching icon.
-export function childMapScene({ locations, currentIndex }) {
+export function playerMapScene({ locations, currentIndex }) {
     return locations.map((location, index) => ({
         id: location.id,
         lat: location.lat,
@@ -28,8 +28,8 @@ export function playerIcon(L, avatarKey) {
     const emoji = avatarEmoji(avatarKey);
 
     return L.divIcon({
-        className: 'child-player-marker',
-        html: `<span class="child-player-marker__bubble">${emoji}</span>`,
+        className: 'play-player-marker',
+        html: `<span class="play-player-marker__bubble">${emoji}</span>`,
         iconSize: [44, 44],
         iconAnchor: [22, 22],
     });
@@ -41,7 +41,7 @@ export function doneStationIcon(L) {
     return L.divIcon({
         className: '',
         html:
-            '<div class="child-station-done">' +
+            '<div class="play-station-done">' +
             '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="3" ' +
             'stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 9 17 20 6"></polyline></svg>' +
             '</div>',
@@ -53,18 +53,18 @@ export function doneStationIcon(L) {
 // Current target: large pulsing orange marker.
 export function currentStationIcon(L) {
     return L.divIcon({
-        className: 'child-station-current',
-        html: '<span class="child-station-current__pulse"></span><span class="child-station-current__dot"></span>',
+        className: 'play-station-current',
+        html: '<span class="play-station-current__pulse"></span><span class="play-station-current__dot"></span>',
         iconSize: [46, 46],
         iconAnchor: [23, 23],
     });
 }
 
-// Future station: small grey dot, no number (children can't read anyway).
+// Future station: small grey dot, no number (the youngest players can't read).
 export function futureStationIcon(L) {
     return L.divIcon({
         className: '',
-        html: '<div class="child-station-future"></div>',
+        html: '<div class="play-station-future"></div>',
         iconSize: [14, 14],
         iconAnchor: [7, 7],
     });

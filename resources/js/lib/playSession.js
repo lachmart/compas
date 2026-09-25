@@ -6,7 +6,7 @@ export function isSessionGone(error) {
     return error?.response?.status === 403;
 }
 
-// Sends a deleted child's browser back to the start: the server has no
+// Sends a deleted player's browser back to the start: the server has no
 // session for them any more, so reloading lands them on the animal picker.
 export function reloadForGoneSession() {
     window.location.reload();

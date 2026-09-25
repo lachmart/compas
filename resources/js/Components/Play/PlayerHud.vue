@@ -7,7 +7,7 @@ const props = defineProps({
     total: { type: Number, required: true },
     // Number of stations already done.
     completed: { type: Number, required: true },
-    // Index of the station the child is heading to now.
+    // Index of the station the player is heading to now.
     current: { type: Number, required: true },
 });
 

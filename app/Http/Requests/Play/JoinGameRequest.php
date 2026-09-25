@@ -19,7 +19,7 @@ class JoinGameRequest extends FormRequest
             'avatar' => [
                 'required',
                 Rule::enum(Avatar::class),
-                // Another child in the game already has this animal.
+                // Another player in the game already has this animal.
                 Rule::notIn($this->route('game')->takenAvatars()),
             ],
             'nickname' => ['nullable', 'string', 'max:50'],

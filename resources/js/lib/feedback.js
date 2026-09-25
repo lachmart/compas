@@ -1,4 +1,4 @@
-// Sound and vibration feedback for the children's game. Tones are
+// Sound and vibration feedback for the player's game. Tones are
 // synthesised with WebAudio (no sound files). Everything here fails
 // silently: no AudioContext (tests, old browsers), autoplay policies or a
 // missing vibration API must never break the game.

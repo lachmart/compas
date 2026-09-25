@@ -52,7 +52,7 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Limits for the children's endpoints, which need no login. Each browser
+     * Limits for the players' endpoints, which need no login. Each browser
      * session gets a tight limit well above normal play (a ping every 5 s at
      * most); the per-IP limit is loose because a whole class often shares
      * one Wi-Fi or mobile network address.
@@ -71,7 +71,7 @@ class AppServiceProvider extends ServiceProvider
 
         foreach ($limits as $name => [$perSession, $perIp]) {
             RateLimiter::for($name, function (Request $request) use ($name, $perSession, $perIp) {
-                // A joined child is keyed by their player; before joining, by
+                // A joined player is keyed by their session; before joining, by
                 // the browser session.
                 $player = $request->session()->get('player_session_id');
                 $who = $player !== null ? 'p:'.$player : 's:'.$request->session()->getId();

@@ -30,7 +30,7 @@ test('visiting a published game without a session shows the join page', function
             ->where('game.slug', $game->slug));
 });
 
-test('a child can join a published game with just a nickname', function () {
+test('a player can join a published game with just a nickname', function () {
     $game = Game::factory()->create(['status' => GameStatus::Published]);
     Location::factory()->create(['game_id' => $game->id, 'order' => 1]);
 
