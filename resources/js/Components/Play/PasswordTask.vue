@@ -1,12 +1,15 @@
 <script setup>
 import { nextTick, onMounted, onUnmounted, ref } from 'vue';
 import ErrorFlash from '@/Components/Play/ErrorFlash.vue';
+import InfoCard from '@/Components/Play/InfoCard.vue';
 import { playSuccess, playWrong, unlockAudio } from '@/lib/feedback';
 import { isSessionGone, reloadForGoneSession } from '@/lib/playSession';
 
 const props = defineProps({
     gameSlug: { type: String, required: true },
     locationId: { type: Number, required: true },
+    // The station's text board, which may hold the clue; null = none.
+    info: { type: Object, default: null },
 });
 const emit = defineEmits(['completed']);
 
@@ -21,6 +24,7 @@ const submitting = ref(false);
 const hasError = ref(false);
 const correct = ref(false);
 const wrong = ref(false);
+const readingInfo = ref(false);
 
 let wrongTimer = null;
 let completeTimer = null;
@@ -75,7 +79,11 @@ const submit = async () => {
 </script>
 
 <template>
-    <div class="flex h-dvh w-full flex-col items-center overflow-y-auto bg-gradient-to-b from-teal-400 to-teal-700 px-4 pb-8 pt-28">
+    <div v-if="readingInfo" class="fixed inset-0 z-[1200]">
+        <InfoCard :info="info" back @continue="readingInfo = false" />
+    </div>
+
+    <div v-else class="flex h-dvh w-full flex-col items-center overflow-y-auto bg-gradient-to-b from-teal-400 to-teal-700 px-4 pb-8 pt-28">
         <ErrorFlash :show="hasError" />
 
         <form class="my-auto flex w-full max-w-sm flex-col items-center gap-5" @submit.prevent="submit">
@@ -120,6 +128,20 @@ const submit = async () => {
                 <svg viewBox="0 0 24 24" class="h-12 w-12" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M5 12.5 10 17.5 19.5 7" />
                 </svg>
+            </button>
+
+            <!-- Back to the station's text, where the clue may be. -->
+            <button
+                v-if="info"
+                type="button"
+                class="mt-2 inline-flex items-center gap-2 rounded-full bg-white/20 px-5 py-3 text-lg font-semibold text-white ring-2 ring-white/60 active:scale-95"
+                @click="readingInfo = true"
+            >
+                <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+                    <path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5Z" />
+                    <path d="M12 6.5v13" />
+                </svg>
+                Text stanoviště
             </button>
         </form>
     </div>

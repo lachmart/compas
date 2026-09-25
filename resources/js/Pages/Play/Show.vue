@@ -156,6 +156,7 @@ const toggleView = () => {
             v-else-if="activeTask && activeTask.task_type === 'password'"
             :game-slug="game.slug"
             :location-id="currentLocation.id"
+            :info="activeTask.info"
             @completed="onTaskCompleted"
         />
 
