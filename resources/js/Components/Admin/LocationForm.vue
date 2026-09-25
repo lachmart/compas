@@ -35,8 +35,9 @@ const form = useForm({
     info_images: [],
 });
 
-// Lets the editor avoid discarding edits when another station is clicked on the map.
-defineExpose({ isDirty: () => form.isDirty });
+// Lets the editor ask before discarding edits when another station is
+// clicked on the map, and save them first when asked to (see save()).
+defineExpose({ isDirty: () => form.isDirty, save: (afterSave) => save(afterSave) });
 
 const heading = computed(() =>
     props.location ? `Upravuješ: ${locationLabel(props.location, props.position)}` : 'Nové stanoviště',
@@ -78,8 +79,17 @@ const useMyLocation = () => {
     );
 };
 
-const submit = () => {
-    const options = { forceFormData: true, preserveScroll: true, onSuccess: () => emit('saved') };
+// afterSave runs once the save succeeded (after 'saved'); on validation
+// errors the form stays open with the messages and afterSave is dropped.
+const save = (afterSave = null) => {
+    const options = {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            emit('saved');
+            afterSave?.();
+        },
+    };
     const withDraft = (data) => ({
         ...data,
         lat: props.draft.lat,
@@ -96,6 +106,8 @@ const submit = () => {
         form.transform(withDraft).post(route('admin.games.locations.store', props.game.id), options);
     }
 };
+
+const submit = () => save();
 
 // Fixed per form so dragging a legacy radius (> 100 m) down doesn't shrink the scale under the thumb.
 const sliderMax = radiusSliderMax(props.draft.arrival_radius_m);

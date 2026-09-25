@@ -1,11 +1,13 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import GameHeader from '@/Components/Admin/GameHeader.vue';
 import GameMap from '@/Components/Admin/GameMap.vue';
 import GameSettings from '@/Components/Admin/GameSettings.vue';
+import Modal from '@/Components/Modal.vue';
+import Button from '@/Components/UI/Button.vue';
 import LocationForm from '@/Components/Admin/LocationForm.vue';
 import LocationList from '@/Components/Admin/LocationList.vue';
 import SharePanel from '@/Components/Admin/SharePanel.vue';
@@ -39,25 +41,7 @@ const tabs = computed(() => [
     { label: 'Sledování', href: route('admin.games.tracking', props.game.id), active: false },
 ]);
 
-// Shown briefly in the map hint pill when a marker/list click is ignored
-// because the open form has unsaved work.
-const BLOCKED_HINT = 'Nejdřív ulož nebo zruš rozpracované stanoviště';
-const BLOCKED_HINT_MS = 3000;
-const blockedHint = ref(false);
-let blockedHintTimer = null;
-
-const showBlockedHint = () => {
-    blockedHint.value = true;
-    clearTimeout(blockedHintTimer);
-    blockedHintTimer = setTimeout(() => {
-        blockedHint.value = false;
-    }, BLOCKED_HINT_MS);
-};
-
-onBeforeUnmount(() => clearTimeout(blockedHintTimer));
-
 const mapHint = computed(() => {
-    if (blockedHint.value && formOpen.value) return BLOCKED_HINT;
     if (state.value.panel === 'add') {
         return state.value.draft?.lat == null ? 'Klikni do mapy, kam stanoviště umístit' : 'Přetáhni značku nebo klikni jinam';
     }
@@ -69,12 +53,17 @@ const mapHint = computed(() => {
 const openLocation = (id) => {
     if (id === state.value.selectedId) return;
 
-    // Opening another location would silently drop unsaved changes in the open form.
+    // Opening another location would drop unsaved changes in the open
+    // form: ask first (save / discard / stay).
     if (hasUnsavedChanges(state.value, selectedLocation.value, Boolean(formRef.value?.isDirty()))) {
-        showBlockedHint();
+        pendingSwitchId.value = id;
         return;
     }
 
+    switchTo(id);
+};
+
+const switchTo = (id) => {
     const location = props.locations.find((l) => l.id === id);
     if (!location) return;
 
@@ -90,9 +79,21 @@ const backToList = () => {
     state.value = listState();
 };
 
-watch(formOpen, (open) => {
-    if (!open) blockedHint.value = false;
-});
+// Station the dozor clicked while the open form had unsaved changes.
+const pendingSwitchId = ref(null);
+
+const saveAndSwitch = () => {
+    const id = pendingSwitchId.value;
+    pendingSwitchId.value = null;
+    // On validation errors the form stays open and shows them.
+    formRef.value?.save(() => switchTo(id));
+};
+
+const discardAndSwitch = () => {
+    const id = pendingSwitchId.value;
+    pendingSwitchId.value = null;
+    switchTo(id);
+};
 
 // GameMap only reports { lat, lng }; keep the radius.
 const onMapDraft = (position) => {
@@ -229,6 +230,18 @@ const confirmDelete = () => {
                 </button>
             </div>
         </div>
+
+        <Modal :show="pendingSwitchId !== null" max-width="md" @close="pendingSwitchId = null">
+            <div class="space-y-4 p-6">
+                <p class="font-semibold text-slate-900">Stanoviště má neuložené změny</p>
+                <p class="text-sm text-slate-600">Chceš je před přepnutím na jiné stanoviště uložit, nebo zahodit?</p>
+                <div class="flex flex-wrap justify-end gap-3">
+                    <Button variant="ghost" type="button" @click="pendingSwitchId = null">Zůstat</Button>
+                    <Button variant="secondary" type="button" class="!text-red-600" @click="discardAndSwitch">Zahodit změny</Button>
+                    <Button type="button" @click="saveAndSwitch">Uložit a přepnout</Button>
+                </div>
+            </div>
+        </Modal>
 
         <ConfirmDialog
             :show="pendingDelete !== null"
