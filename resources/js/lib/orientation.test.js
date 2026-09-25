@@ -8,6 +8,9 @@ import {
     UPRIGHT_EXIT_DEG,
     absoluteOrientation,
     aimTarget,
+    arTargetSize,
+    AR_TARGET_FAR,
+    AR_TARGET_NEAR,
     angleDiff,
     relativeOrientation,
     cameraHeading,
@@ -204,5 +207,27 @@ describe('relativeOrientation', () => {
     test('ignores events with missing angles (e.g. a desktop absolute event full of nulls)', () => {
         expect(relativeOrientation({ absolute: true, alpha: null, beta: null, gamma: null })).toBeNull();
         expect(relativeOrientation({ alpha: 10, beta: null, gamma: 5 })).toBeNull();
+    });
+});
+
+describe('arTargetSize', () => {
+    test('small far away, big close by', () => {
+        expect(arTargetSize(AR_TARGET_FAR.meters)).toBe(AR_TARGET_FAR.px);
+        expect(arTargetSize(AR_TARGET_NEAR.meters)).toBe(AR_TARGET_NEAR.px);
+    });
+
+    test('clamped beyond both ends', () => {
+        expect(arTargetSize(5000)).toBe(AR_TARGET_FAR.px);
+        expect(arTargetSize(2)).toBe(AR_TARGET_NEAR.px);
+    });
+
+    test('grows the most over the last metres (log scale)', () => {
+        const mid = arTargetSize(Math.sqrt(AR_TARGET_FAR.meters * AR_TARGET_NEAR.meters));
+        expect(mid).toBe(Math.round((AR_TARGET_FAR.px + AR_TARGET_NEAR.px) / 2));
+        expect(arTargetSize(100)).toBeLessThan(arTargetSize(50));
+    });
+
+    test('unknown distance gets a middle size', () => {
+        expect(arTargetSize(null)).toBe(80);
     });
 });

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, watch } from 'vue';
 import ArrivalRing from '@/Components/Play/ArrivalRing.vue';
+import { arTargetSize } from '@/lib/orientation';
 
 // AR overlay for the upright phone: a fixed reticle in the middle and the
 // target drawn where it really is (see aimTarget() in orientation.js).
@@ -14,6 +15,9 @@ const props = defineProps({
 
 // Only the middle 80 % of the width, so the marker never leaves the screen.
 const markerLeft = computed(() => `${50 + props.aim.offset * 40}%`);
+
+// The target grows as the player gets closer.
+const targetSize = computed(() => `${arTargetSize(props.distance)}px`);
 
 const distanceLabel = computed(() => (props.distance === null ? null : `${Math.round(props.distance)} m`));
 
@@ -43,17 +47,20 @@ watch(
         >
             <svg
                 viewBox="0 0 48 48"
-                class="block drop-shadow-[0_2px_6px_rgba(15,23,42,0.6)] motion-safe:transition-transform"
-                :class="aim.aligned ? 'h-24 w-24 scale-110' : 'h-20 w-20'"
+                class="block drop-shadow-[0_2px_6px_rgba(15,23,42,0.6)] motion-safe:transition-all motion-safe:duration-500"
+                :class="{ 'scale-110': aim.aligned }"
+                :style="{ width: targetSize, height: targetSize }"
             >
                 <circle cx="24" cy="24" r="21" class="fill-white" />
                 <circle cx="24" cy="24" r="15" class="fill-orange-500" />
                 <circle cx="24" cy="24" r="9" class="fill-white" />
                 <circle cx="24" cy="24" r="4" class="fill-orange-500" />
             </svg>
+            <!-- Measured from the target's centre, so it stays just under the
+                 reticle whatever the target's size. -->
             <span
                 v-if="distanceLabel"
-                class="absolute left-1/2 top-full mt-8 -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-900/70 px-3 py-0.5 text-lg font-bold tabular-nums text-white"
+                class="absolute left-1/2 top-1/2 mt-[5.5rem] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-900/70 px-3 py-0.5 text-lg font-bold tabular-nums text-white"
             >{{ distanceLabel }}</span>
         </div>
 

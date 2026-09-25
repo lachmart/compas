@@ -113,3 +113,17 @@ export function relativeOrientation(event) {
 
     return { alpha, beta, gamma };
 }
+
+// On-screen size (px) of the AR target: small far away, big close by, on a
+// log scale so the last tens of metres grow the most.
+export const AR_TARGET_FAR = { meters: 300, px: 56 };
+export const AR_TARGET_NEAR = { meters: 10, px: 128 };
+
+export function arTargetSize(distanceMeters) {
+    if (distanceMeters === null || distanceMeters === undefined) return 80;
+
+    const clamped = Math.min(AR_TARGET_FAR.meters, Math.max(AR_TARGET_NEAR.meters, distanceMeters));
+    const t = Math.log(AR_TARGET_FAR.meters / clamped) / Math.log(AR_TARGET_FAR.meters / AR_TARGET_NEAR.meters);
+
+    return Math.round(AR_TARGET_FAR.px + t * (AR_TARGET_NEAR.px - AR_TARGET_FAR.px));
+}
