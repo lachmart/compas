@@ -1,7 +1,7 @@
 <script setup>
-import { computed, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import ArrivalRing from '@/Components/Play/ArrivalRing.vue';
-import { arTargetSize } from '@/lib/orientation';
+import { arTargetSize, easeTowards } from '@/lib/orientation';
 
 // AR overlay for the upright phone: a fixed reticle in the middle and the
 // target drawn where it really is (see aimTarget() in orientation.js).
@@ -13,8 +13,41 @@ const props = defineProps({
     arrivalProgress: { type: Number, default: null },
 });
 
-// Only the middle 80 % of the width, so the marker never leaves the screen.
-const markerLeft = computed(() => `${50 + props.aim.offset * 40}%`);
+// The marker glides towards where the target is on every animation frame
+// instead of jumping with each sensor reading. Written straight to the
+// element's transform (no re-render per frame), using only the middle 80 %
+// of the width so it never leaves the screen.
+const GLIDE_MS = 150;
+const marker = ref(null);
+let shownOffset = null;
+let lastFrameAt = null;
+let frame = null;
+
+const glide = (now) => {
+    const dt = lastFrameAt === null ? 16 : now - lastFrameAt;
+    lastFrameAt = now;
+    const target = props.aim.offset;
+
+    if (target === null || !marker.value) {
+        shownOffset = null;
+    } else {
+        const next = easeTowards(shownOffset, target, dt, GLIDE_MS);
+
+        if (shownOffset === null || Math.abs(next - shownOffset) > 0.0005) {
+            marker.value.style.transform = `translate(calc(-50% + ${(next * 40).toFixed(2)}vw), -50%)`;
+        }
+
+        shownOffset = next;
+    }
+
+    frame = requestAnimationFrame(glide);
+};
+
+onMounted(() => {
+    frame = requestAnimationFrame(glide);
+});
+
+onUnmounted(() => cancelAnimationFrame(frame));
 
 // The target grows as the player gets closer.
 const targetSize = computed(() => `${arTargetSize(props.distance)}px`);
@@ -42,8 +75,9 @@ watch(
              centred on the horizon; the distance hangs below it. -->
         <div
             v-if="aim.offset !== null"
-            class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 motion-safe:transition-[left] motion-safe:duration-100 motion-safe:ease-linear"
-            :style="{ left: markerLeft }"
+            ref="marker"
+            class="absolute left-1/2 top-1/2 will-change-transform"
+            style="transform: translate(-50%, -50%)"
         >
             <svg
                 viewBox="0 0 48 48"

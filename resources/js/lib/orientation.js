@@ -8,9 +8,10 @@ export const UPRIGHT_ENTER_DEG = 70;
 export const UPRIGHT_EXIT_DEG = 50;
 // Horizontal field of view the camera screen maps the world onto.
 export const AR_FOV_DEG = 50;
-// Aimed at the target (enter / leave, hysteresis against flicker).
-export const AIM_DEG = 5;
-export const AIM_EXIT_DEG = 8;
+// Aimed at the target (enter / leave, hysteresis against flicker). Phone
+// compasses wobble by several degrees, so tighter than this is unreachable.
+export const AIM_DEG = 8;
+export const AIM_EXIT_DEG = 12;
 export const BEHIND_DEG = 135;
 
 const RAD = Math.PI / 180;
@@ -126,4 +127,13 @@ export function arTargetSize(distanceMeters) {
     const t = Math.log(AR_TARGET_FAR.meters / clamped) / Math.log(AR_TARGET_FAR.meters / AR_TARGET_NEAR.meters);
 
     return Math.round(AR_TARGET_FAR.px + t * (AR_TARGET_NEAR.px - AR_TARGET_FAR.px));
+}
+
+// Exponential easing for per-frame animation: moves `current` towards
+// `target` by the share of the gap a `timeConstantMs` decay covers in
+// `dtMs`, so the motion looks the same at any frame rate.
+export function easeTowards(current, target, dtMs, timeConstantMs) {
+    if (current === null || current === undefined) return target;
+
+    return current + (target - current) * (1 - Math.exp(-dtMs / timeConstantMs));
 }

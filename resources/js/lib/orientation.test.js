@@ -9,6 +9,7 @@ import {
     absoluteOrientation,
     aimTarget,
     arTargetSize,
+    easeTowards,
     AR_TARGET_FAR,
     AR_TARGET_NEAR,
     angleDiff,
@@ -229,5 +230,23 @@ describe('arTargetSize', () => {
 
     test('unknown distance gets a middle size', () => {
         expect(arTargetSize(null)).toBe(80);
+    });
+});
+
+describe('easeTowards', () => {
+    test('starts at the target', () => {
+        expect(easeTowards(null, 0.4, 16, 120)).toBe(0.4);
+    });
+
+    test('covers ~63 % of the gap in one time constant', () => {
+        expect(easeTowards(0, 1, 120, 120)).toBeCloseTo(1 - Math.exp(-1));
+    });
+
+    test('the same motion at any frame rate', () => {
+        let at60 = 0;
+        for (let i = 0; i < 6; i++) at60 = easeTowards(at60, 1, 1000 / 60, 120);
+        const at30 = easeTowards(easeTowards(easeTowards(0, 1, 1000 / 30, 120), 1, 1000 / 30, 120), 1, 1000 / 30, 120);
+
+        expect(at60).toBeCloseTo(at30);
     });
 });
