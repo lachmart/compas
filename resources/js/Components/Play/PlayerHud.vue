@@ -11,6 +11,8 @@ const props = defineProps({
     current: { type: Number, required: true },
 });
 
+defineEmits(['help']);
+
 const emoji = computed(() => avatarEmoji(props.avatar));
 
 // Many stations -> smaller dots so the row still fits beside the animal.
@@ -28,12 +30,16 @@ const stateOf = (index) => {
     <div
         class="pointer-events-none absolute inset-x-0 top-0 z-[1000] flex items-start justify-between gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))]"
     >
-        <div
-            class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white text-4xl shadow-lg ring-4 ring-white/60"
-            aria-hidden="true"
+        <!-- The player's animal doubles as the help button. -->
+        <button
+            type="button"
+            aria-label="Nápověda"
+            class="pointer-events-auto relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white text-4xl shadow-lg ring-4 ring-white/60 active:scale-95"
+            @click="$emit('help')"
         >
-            {{ emoji }}
-        </div>
+            <span aria-hidden="true">{{ emoji }}</span>
+            <span class="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-teal-600 text-sm font-bold text-white ring-2 ring-white" aria-hidden="true">?</span>
+        </button>
 
         <div
             class="mt-3 flex min-w-0 flex-wrap items-center justify-end rounded-3xl bg-white/90 px-3 py-2 shadow-lg"

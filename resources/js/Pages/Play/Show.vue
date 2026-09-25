@@ -10,6 +10,8 @@ import PasswordTask from '@/Components/Play/PasswordTask.vue';
 import InfoCard from '@/Components/Play/InfoCard.vue';
 import JournalButton from '@/Components/Play/JournalButton.vue';
 import JournalOverlay from '@/Components/Play/JournalOverlay.vue';
+import HelpSheet from '@/Components/Play/HelpSheet.vue';
+import { helpSeen, markHelpSeen } from '@/lib/helpSeen';
 import RewardOverlay from '@/Components/Play/RewardOverlay.vue';
 import FinishScreen from '@/Components/Play/FinishScreen.vue';
 import { unlockAudio } from '@/lib/feedback';
@@ -62,6 +64,17 @@ onMounted(() => {
 onUnmounted(stopUnlockListeners);
 
 const currentLocation = computed(() => props.locations[currentIndex.value] ?? null);
+
+// "How to play": by itself before the first game on this device, later
+// from the player's animal in the HUD.
+const helpOpen = ref(!finished.value && !helpSeen());
+
+const closeHelp = () => {
+    // A tap: unlock sound for what follows (iOS gesture rule).
+    unlockAudio();
+    markHelpSeen();
+    helpOpen.value = false;
+};
 
 // The journal (text boards and own photos of passed stations) is offered
 // once a passed station has either.
@@ -137,6 +150,8 @@ const toggleView = () => {
     <Head :title="game.name" />
 
     <JournalOverlay v-if="journalOpen" :game-slug="game.slug" @close="journalOpen = false" />
+
+    <HelpSheet v-if="helpOpen" :avatar="player.avatar" @close="closeHelp" />
 
     <div v-if="finished" class="relative">
         <FinishScreen :avatar="player.avatar" :stars="locations.length" />
@@ -241,6 +256,7 @@ const toggleView = () => {
             :total="locations.length"
             :completed="currentIndex"
             :current="currentIndex"
+            @help="helpOpen = true"
         />
     </div>
 </template>
