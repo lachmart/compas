@@ -2,9 +2,11 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
+import HelpSheet from '@/Components/Play/HelpSheet.vue';
 import PermissionsSheet from '@/Components/Play/PermissionsSheet.vue';
 import { AVATARS } from '@/lib/avatars';
 import { unlockAudio } from '@/lib/feedback';
+import { helpSeen, markHelpSeen } from '@/lib/helpSeen';
 import { useCameraPreference } from '@/lib/useCameraPreference';
 import { requestOrientationPermission } from '@/lib/orientationPermission';
 
@@ -66,8 +68,42 @@ const pick = (key) => {
     hint.value = null;
 };
 
-// ▶ first explains the permissions; the sheet's buttons then ask for them.
-const askingPermissions = ref(false);
+// Before anything else the screen explains and asks for the permissions,
+// then (once per device) shows how to play; the animal comes after. The
+// sheet's buttons ask inside the tap (iOS gesture rule).
+const intro = ref('permissions'); // 'permissions' | 'help' | null
+const permissionsAsked = ref(false);
+
+const { enableCamera, disableCamera } = useCameraPreference();
+
+const askPermissions = (withCamera) => {
+    unlockAudio();
+
+    // All prompts must start inside this tap: iOS only asks for the compass
+    // permission during a user gesture. Don't await — the game screen picks
+    // the results up from the shared permission state.
+    requestOrientationPermission();
+    navigator.geolocation?.getCurrentPosition(
+        () => {},
+        () => {},
+    );
+
+    // The camera is only asked for here (or later from the help), never by
+    // surprise: a refusal or "without camera" is remembered.
+    if (withCamera) {
+        enableCamera();
+    } else {
+        disableCamera();
+    }
+
+    permissionsAsked.value = true;
+    intro.value = helpSeen() ? null : 'help';
+};
+
+const closeHelp = () => {
+    markHelpSeen();
+    intro.value = null;
+};
 
 const play = () => {
     // Unlock sound for the whole game inside this tap (iOS gesture rule).
@@ -81,31 +117,11 @@ const play = () => {
         return;
     }
 
-    askingPermissions.value = true;
-};
+    // Closed the permissions sheet without answering: ask now.
+    if (!permissionsAsked.value) {
+        intro.value = 'permissions';
 
-// The camera is only asked for now (or later from the help), never by
-// surprise: a refusal or "without camera" is remembered and the AR view keeps
-// its plain background.
-const { enableCamera, disableCamera } = useCameraPreference();
-
-const startGame = (withCamera) => {
-    unlockAudio();
-    askingPermissions.value = false;
-
-    // All prompts must start inside this tap: iOS only asks for the compass
-    // permission during a user gesture. Don't await — the game screen picks
-    // the results up from the shared permission state.
-    requestOrientationPermission();
-    navigator.geolocation?.getCurrentPosition(
-        () => {},
-        () => {},
-    );
-
-    if (withCamera) {
-        enableCamera();
-    } else {
-        disableCamera();
+        return;
     }
 
     form.post(route('play.join', props.game.slug), {
@@ -223,7 +239,8 @@ const startGame = (withCamera) => {
             </button>
         </form>
 
-        <PermissionsSheet v-if="askingPermissions" @start="startGame" @close="askingPermissions = false" />
+        <PermissionsSheet v-if="intro === 'permissions'" @start="askPermissions" @close="intro = null" />
+        <HelpSheet v-else-if="intro === 'help'" @close="closeHelp" />
     </div>
 </template>
 

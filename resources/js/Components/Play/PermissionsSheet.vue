@@ -60,12 +60,12 @@ const start = (withCamera) => emit('start', withCamera);
                 type="button"
                 class="rounded-full bg-gradient-to-b from-emerald-400 to-emerald-600 px-6 py-4 text-lg font-bold text-white shadow-lg shadow-emerald-700/30 active:scale-[0.98]"
                 @click="start(true)"
-            >Povolit a hrát</button>
+            >Povolit a pokračovat</button>
             <button
                 type="button"
                 class="rounded-full px-6 py-3 font-semibold text-teal-800 hover:bg-teal-50 active:scale-[0.98]"
                 @click="start(false)"
-            >Hrát bez fotoaparátu</button>
+            >Pokračovat bez fotoaparátu</button>
         </div>
     </PlaySheet>
 </template>
