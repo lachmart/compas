@@ -34,15 +34,16 @@ watch(
         <!-- Horizon guide through the reticle. -->
         <div class="absolute inset-x-0 top-1/2 h-px bg-white/40"></div>
 
-        <!-- Target marker at its real direction. -->
+        <!-- Target marker at its real direction. Only the target itself is
+             centred on the horizon; the distance hangs below it. -->
         <div
             v-if="aim.offset !== null"
-            class="absolute top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2 motion-safe:transition-[left] motion-safe:duration-100 motion-safe:ease-linear"
+            class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 motion-safe:transition-[left] motion-safe:duration-100 motion-safe:ease-linear"
             :style="{ left: markerLeft }"
         >
             <svg
                 viewBox="0 0 48 48"
-                class="drop-shadow-[0_2px_6px_rgba(15,23,42,0.6)] motion-safe:transition-transform"
+                class="block drop-shadow-[0_2px_6px_rgba(15,23,42,0.6)] motion-safe:transition-transform"
                 :class="aim.aligned ? 'h-24 w-24 scale-110' : 'h-20 w-20'"
             >
                 <circle cx="24" cy="24" r="21" class="fill-white" />
@@ -50,7 +51,10 @@ watch(
                 <circle cx="24" cy="24" r="9" class="fill-white" />
                 <circle cx="24" cy="24" r="4" class="fill-orange-500" />
             </svg>
-            <span v-if="distanceLabel" class="rounded-full bg-slate-900/70 px-3 py-0.5 text-lg font-bold tabular-nums text-white">{{ distanceLabel }}</span>
+            <span
+                v-if="distanceLabel"
+                class="absolute left-1/2 top-full mt-8 -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-900/70 px-3 py-0.5 text-lg font-bold tabular-nums text-white"
+            >{{ distanceLabel }}</span>
         </div>
 
         <!-- Reticle: where the camera points. Green when aimed. -->
