@@ -2,10 +2,15 @@
 // alpha is absolute: 0 = top edge of a flat phone points north, growing
 // counter-clockwise (W3C Device Orientation convention).
 
-export const UPRIGHT_ENTER_DEG = 55;
-export const UPRIGHT_EXIT_DEG = 35;
-export const ON_COURSE_DEG = 20;
-export const ON_COURSE_EXIT_DEG = 28;
+// The camera view only takes over when the phone is held really upright
+// (a light tilt while walking keeps the flat compass).
+export const UPRIGHT_ENTER_DEG = 70;
+export const UPRIGHT_EXIT_DEG = 50;
+// Horizontal field of view the camera screen maps the world onto.
+export const AR_FOV_DEG = 50;
+// Aimed at the target (enter / leave, hysteresis against flicker).
+export const AIM_DEG = 5;
+export const AIM_EXIT_DEG = 8;
 export const BEHIND_DEG = 135;
 
 const RAD = Math.PI / 180;
@@ -43,20 +48,41 @@ export function nextPosture(previous, beta, gamma) {
     return previous;
 }
 
-// bearing: direction to the target; heading: direction the camera faces.
-// previous: the last guidance value, used for hysteresis so that hovering
-// right at the on-course edge doesn't flicker between 'on_course' and a
-// turn direction on every reading.
-export function turnGuidance(bearing, heading, previous = null) {
-    let diff = normalize360(bearing - heading);
-    if (diff > 180) diff -= 360;
+// Signed shortest turn from `from` to `to`, in (-180, 180]; positive is
+// clockwise.
+export function angleDiff(from, to) {
+    const diff = normalize360(to - from);
 
-    const tolerance = previous === 'on_course' ? ON_COURSE_EXIT_DEG : ON_COURSE_DEG;
+    return diff > 180 ? diff - 360 : diff;
+}
 
-    if (Math.abs(diff) <= tolerance) return 'on_course';
-    if (Math.abs(diff) > BEHIND_DEG) return 'behind';
+// Where the target sits in the camera view. bearing: direction to the
+// target; heading: direction the camera faces; wasAligned: the previous
+// `aligned`, for hysteresis.
+//   offset    -1 (left edge) … 1 (right edge), null when outside the view
+//   direction 'left' | 'right' | 'behind' when outside the view, else null
+//   aligned   aimed at the target
+export function aimTarget(bearing, heading, wasAligned = false) {
+    const diff = angleDiff(heading, bearing);
+    const half = AR_FOV_DEG / 2;
+    const inView = Math.abs(diff) <= half;
 
-    return diff > 0 ? 'right' : 'left';
+    let direction = null;
+    if (!inView) direction = Math.abs(diff) > BEHIND_DEG ? 'behind' : diff > 0 ? 'right' : 'left';
+
+    return {
+        offset: inView ? diff / half : null,
+        direction,
+        aligned: Math.abs(diff) <= (wasAligned ? AIM_EXIT_DEG : AIM_DEG),
+    };
+}
+
+// Low-pass filter for a compass angle: moves `previous` a `factor` of the
+// shortest way towards `next`, so the on-screen target doesn't jitter.
+export function smoothAngle(previous, next, factor) {
+    if (previous === null || previous === undefined) return normalize360(next);
+
+    return normalize360(previous + factor * angleDiff(previous, next));
 }
 
 // Normalises a deviceorientation(absolute) event into absolute angles, or

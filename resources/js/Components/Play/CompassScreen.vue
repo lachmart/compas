@@ -1,14 +1,15 @@
 <script setup>
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { arrowRotationDegrees, bearingDegrees, distanceMeters } from '@/lib/geo';
-import { cameraHeading, nextPosture, turnGuidance } from '@/lib/orientation';
+import { aimTarget, cameraHeading, nextPosture, smoothAngle } from '@/lib/orientation';
 import { HEAT_LEVELS, heatGradient, heatLevel } from '@/lib/proximity';
 import { isSessionGone, reloadForGoneSession } from '@/lib/playSession';
 import { useSensors } from '@/lib/useSensors';
+import ArAim from '@/Components/Play/ArAim.vue';
 import ArrivalRing from '@/Components/Play/ArrivalRing.vue';
+import CameraFeed from '@/Components/Play/CameraFeed.vue';
 import CompassArrow from '@/Components/Play/CompassArrow.vue';
 import ErrorFlash from '@/Components/Play/ErrorFlash.vue';
-import TurnGuide from '@/Components/Play/TurnGuide.vue';
 
 const props = defineProps({
     location: { type: Object, required: true },
@@ -42,28 +43,36 @@ const rotation = computed(() => {
 });
 
 // 'flat' shows the classic arrow; 'upright' (phone held like a camera)
-// shows turn guidance. nextPosture() applies the hysteresis band.
+// shows the AR aim over the camera picture. nextPosture() applies the
+// hysteresis band.
 const posture = ref('flat');
 
+// Camera direction, smoothed so the on-screen target doesn't jitter.
+const SMOOTHING = 0.2;
+const cameraDirection = ref(null);
+
 watch(orientation, (value) => {
-    if (value) posture.value = nextPosture(posture.value, value.beta, value.gamma);
+    if (!value) return;
+
+    posture.value = nextPosture(posture.value, value.beta, value.gamma);
+    cameraDirection.value = posture.value === 'upright'
+        ? smoothAngle(cameraDirection.value, cameraHeading(value.alpha, value.beta, value.gamma), SMOOTHING)
+        : null;
 });
 
-// A ref (not a computed) so its own previous value can feed back into
-// turnGuidance() for on-course hysteresis (see orientation.js). watch()
-// with an explicit source list avoids a self-triggering effect.
-const guidance = ref(null);
+const arMode = computed(() => posture.value === 'upright' && cameraDirection.value !== null && bearing.value !== null);
 
-watch([posture, orientation, bearing], () => {
-    if (posture.value !== 'upright' || !orientation.value || bearing.value === null) {
-        guidance.value = null;
-        return;
-    }
+// A ref (not a computed) so its previous `aligned` can feed back into
+// aimTarget() for hysteresis; watch() with explicit sources avoids a
+// self-triggering effect.
+const aim = ref(null);
 
-    const { alpha, beta, gamma } = orientation.value;
-
-    guidance.value = turnGuidance(bearing.value, cameraHeading(alpha, beta, gamma), guidance.value);
+watch([arMode, cameraDirection, bearing], () => {
+    aim.value = arMode.value ? aimTarget(bearing.value, cameraDirection.value, aim.value?.aligned ?? false) : null;
 });
+
+// A refused or missing camera isn't asked for again on every tilt.
+const cameraUnavailable = ref(false);
 
 // Hot/cold background: one layer per heat level, crossfaded by opacity
 // (gradients themselves can't be CSS-transitioned).
@@ -185,23 +194,22 @@ onUnmounted(() => {
             aria-hidden="true"
         ></div>
 
+        <!-- Upright: the camera picture (the heat colours stay behind it if
+             there's no camera) with the AR aim on top. -->
+        <CameraFeed v-if="aim && !cameraUnavailable" class="absolute inset-0" @unavailable="cameraUnavailable = true" />
+
         <ErrorFlash :show="hasArrivalError" />
 
-        <div class="relative flex h-full flex-col items-center justify-center gap-12 px-4 pb-24 pt-24">
-            <!-- Dial with the arrow (flat) or turn guidance (upright). -->
+        <ArAim v-if="aim" :aim="aim" :distance="distance" :arrival-progress="arrivalProgress" />
+
+        <div v-else class="relative flex h-full flex-col items-center justify-center gap-12 px-4 pb-24 pt-24">
+            <!-- Dial with the arrow. -->
             <div class="relative aspect-square w-72 max-w-[80vw]">
                 <div v-if="arrivalProgress !== null" class="pointer-events-none absolute -inset-8">
                     <ArrivalRing :progress="arrivalProgress" />
                 </div>
 
-                <div
-                    v-if="guidance"
-                    class="flex h-full w-full items-center justify-center rounded-full bg-slate-900/45 shadow-xl ring-4 ring-white/80 [&_svg]:text-white"
-                >
-                    <TurnGuide :guidance="guidance" />
-                </div>
-
-                <CompassArrow v-else-if="hasHeading" :rotation="rotation" :dimmed="bearing === null" />
+                <CompassArrow v-if="hasHeading" :rotation="rotation" :dimmed="bearing === null" />
 
                 <!-- No heading yet. On iOS the compass must be switched on by a tap
                      (withdrawn after a denied tap: the static icon below stays). -->

@@ -1,16 +1,19 @@
 import { describe, expect, test } from 'vitest';
 import {
+    AIM_DEG,
+    AIM_EXIT_DEG,
+    AR_FOV_DEG,
     BEHIND_DEG,
-    ON_COURSE_DEG,
-    ON_COURSE_EXIT_DEG,
     UPRIGHT_ENTER_DEG,
     UPRIGHT_EXIT_DEG,
     absoluteOrientation,
+    aimTarget,
+    angleDiff,
     relativeOrientation,
     cameraHeading,
     nextPosture,
+    smoothAngle,
     tiltDegrees,
-    turnGuidance,
 } from './orientation';
 
 describe('cameraHeading', () => {
@@ -87,83 +90,84 @@ describe('nextPosture', () => {
     });
 
     test('keeps the previous posture inside the hysteresis band', () => {
-        expect(nextPosture('flat', 45, 0)).toBe('flat');
-        expect(nextPosture('upright', 45, 0)).toBe('upright');
+        expect(nextPosture('flat', 60, 0)).toBe('flat');
+        expect(nextPosture('upright', 60, 0)).toBe('upright');
     });
 
-    // Exact UPRIGHT_ENTER_DEG (55) is flaky: tiltDegrees(55, 0) round-trips
-    // through cos/acos to 55.00000000000001, which is > 55 and would flip
-    // posture. Using 54.9/35.1 keeps the assertion meaningful and stable.
+    test('a moderate tilt while walking keeps the flat compass', () => {
+        expect(nextPosture('flat', 55, 0)).toBe('flat');
+        expect(nextPosture('flat', 65, 10)).toBe('flat');
+    });
+
+    // Exact thresholds are flaky: tiltDegrees round-trips through cos/acos
+    // (70 -> 70.00000000000001). Just inside keeps the assertion stable.
     test('near-exact thresholds keep the current posture', () => {
-        expect(nextPosture('flat', 54.9, 0)).toBe('flat');
-        expect(nextPosture('upright', 35.1, 0)).toBe('upright');
+        expect(nextPosture('flat', UPRIGHT_ENTER_DEG - 0.1, 0)).toBe('flat');
+        expect(nextPosture('upright', UPRIGHT_EXIT_DEG + 0.1, 0)).toBe('upright');
     });
 });
 
-describe('turnGuidance', () => {
-    test('on course within the tolerance on either side', () => {
-        expect(turnGuidance(100, 100)).toBe('on_course');
-        expect(turnGuidance(100, 100 - ON_COURSE_DEG)).toBe('on_course');
-        expect(turnGuidance(100, 100 + ON_COURSE_DEG)).toBe('on_course');
+describe('angleDiff', () => {
+    test('signed shortest turn, clockwise positive', () => {
+        expect(angleDiff(0, 30)).toBe(30);
+        expect(angleDiff(30, 0)).toBe(-30);
+        expect(angleDiff(350, 10)).toBe(20);
+        expect(angleDiff(10, 350)).toBe(-20);
+        expect(angleDiff(0, 180)).toBe(180);
+    });
+});
+
+describe('aimTarget', () => {
+    const half = AR_FOV_DEG / 2;
+
+    test('straight ahead is centred and aimed', () => {
+        expect(aimTarget(100, 100)).toEqual({ offset: 0, direction: null, aligned: true });
     });
 
-    test('target clockwise of the camera means turn right', () => {
-        expect(turnGuidance(100, 50)).toBe('right');
+    test('inside the view the target slides with the angle', () => {
+        expect(aimTarget(100 + half / 2, 100).offset).toBeCloseTo(0.5);
+        expect(aimTarget(100 - half, 100).offset).toBeCloseTo(-1);
+        expect(aimTarget(100 + half, 100).direction).toBeNull();
     });
 
-    test('target counter-clockwise of the camera means turn left', () => {
-        expect(turnGuidance(50, 100)).toBe('left');
+    test('outside the view it points the way to turn', () => {
+        expect(aimTarget(100 + half + 1, 100)).toMatchObject({ offset: null, direction: 'right' });
+        expect(aimTarget(100 - half - 1, 100)).toMatchObject({ offset: null, direction: 'left' });
     });
 
-    test('target behind means turn around', () => {
-        expect(turnGuidance(0, 180)).toBe('behind');
-        expect(turnGuidance(0, BEHIND_DEG + 1)).toBe('behind');
-        expect(turnGuidance(0, 360 - BEHIND_DEG - 1)).toBe('behind');
-    });
-
-    test('just inside the behind threshold is still a turn', () => {
-        expect(turnGuidance(0, 360 - BEHIND_DEG + 1)).toBe('right');
-        expect(turnGuidance(0, BEHIND_DEG - 1)).toBe('left');
-    });
-
-    test('exactly 135 is still a turn, not behind', () => {
-        expect(turnGuidance(0, BEHIND_DEG)).toBe('left');
-        expect(turnGuidance(0, 360 - BEHIND_DEG)).toBe('right');
+    test('far behind means turn around', () => {
+        expect(aimTarget(0, 180).direction).toBe('behind');
+        expect(aimTarget(0, BEHIND_DEG + 1).direction).toBe('behind');
+        expect(aimTarget(0, BEHIND_DEG).direction).toBe('left');
     });
 
     test('wraps around north', () => {
-        expect(turnGuidance(350, 40)).toBe('left');
-        expect(turnGuidance(40, 350)).toBe('right');
-        expect(turnGuidance(355, 5)).toBe('on_course');
+        expect(aimTarget(355, 5).offset).toBeCloseTo(-10 / half);
+        expect(aimTarget(5, 355).offset).toBeCloseTo(10 / half);
     });
 
-    describe('hysteresis on the on-course exit', () => {
-        test('a 25 degree diff stays on course when already on course', () => {
-            expect(turnGuidance(25, 0, 'on_course')).toBe('on_course');
-            expect(turnGuidance(0, 25, 'on_course')).toBe('on_course');
-        });
+    test('aiming has hysteresis', () => {
+        const between = (AIM_DEG + AIM_EXIT_DEG) / 2;
 
-        test('a 29 degree diff leaves on course', () => {
-            expect(turnGuidance(29, 0, 'on_course')).toBe('right');
-            expect(turnGuidance(0, 29, 'on_course')).toBe('left');
-        });
+        expect(aimTarget(AIM_DEG, 0).aligned).toBe(true);
+        expect(aimTarget(between, 0, false).aligned).toBe(false);
+        expect(aimTarget(between, 0, true).aligned).toBe(true);
+        expect(aimTarget(AIM_EXIT_DEG + 1, 0, true).aligned).toBe(false);
+    });
+});
 
-        test('a 25 degree diff is a turn (not on course) from left, right, or no previous', () => {
-            expect(turnGuidance(25, 0, 'left')).toBe('right');
-            expect(turnGuidance(25, 0, 'right')).toBe('right');
-            expect(turnGuidance(25, 0, null)).toBe('right');
-            expect(turnGuidance(25, 0)).toBe('right');
-        });
+describe('smoothAngle', () => {
+    test('starts at the first reading', () => {
+        expect(smoothAngle(null, 42, 0.2)).toBe(42);
+    });
 
-        test('exactly ON_COURSE_DEG (20) enters on course regardless of previous', () => {
-            expect(turnGuidance(ON_COURSE_DEG, 0, null)).toBe('on_course');
-            expect(turnGuidance(ON_COURSE_DEG, 0, 'left')).toBe('on_course');
-        });
+    test('moves part of the way towards the new reading', () => {
+        expect(smoothAngle(0, 100, 0.25)).toBeCloseTo(25);
+    });
 
-        test('exactly ON_COURSE_EXIT_DEG (28) still stays on course, 29 leaves', () => {
-            expect(turnGuidance(ON_COURSE_EXIT_DEG, 0, 'on_course')).toBe('on_course');
-            expect(turnGuidance(ON_COURSE_EXIT_DEG + 1, 0, 'on_course')).toBe('right');
-        });
+    test('takes the short way round north', () => {
+        expect(smoothAngle(350, 10, 0.5)).toBeCloseTo(0);
+        expect(smoothAngle(10, 350, 0.5)).toBeCloseTo(0);
     });
 });
 
