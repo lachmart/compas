@@ -3,7 +3,8 @@ import { onMounted, ref } from 'vue';
 import InfoCard from '@/Components/Play/InfoCard.vue';
 import { isSessionGone, reloadForGoneSession } from '@/lib/playSession';
 
-// The text boards of the stations this player has passed, to read again.
+// The stations this player has passed: their text boards and the player's
+// own photos, to look at again.
 const props = defineProps({
     gameSlug: { type: String, required: true },
 });
@@ -77,7 +78,7 @@ const entryTitle = (entry) => entry.title || `Stanoviště ${entry.position}`;
                     >
                         <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-teal-600 text-lg font-bold text-white">{{ entry.position }}</span>
                         <span class="min-w-0 flex-1 break-words text-lg font-semibold text-slate-900">{{ entryTitle(entry) }}</span>
-                        <img v-if="entry.images.length" :src="entry.images[0]" alt="" loading="lazy" class="h-16 w-16 shrink-0 rounded-2xl object-cover" />
+                        <img v-if="entry.photo || entry.images.length" :src="entry.photo ?? entry.images[0]" alt="" loading="lazy" class="h-16 w-16 shrink-0 rounded-2xl object-cover" />
                     </button>
                 </li>
             </ul>

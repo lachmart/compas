@@ -54,6 +54,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
 Route::prefix('hra/{game:slug}')->middleware('published.game')->group(function () {
     Route::get('/', [PlayController::class, 'show'])->name('play.show');
     Route::get('/denik', [PlayController::class, 'journal'])->middleware('throttle:play-actions')->name('play.journal');
+    Route::get('/fotky/{attempt}', [PlayController::class, 'photo'])->middleware('throttle:play-media')->name('play.photo');
     Route::post('/join', [PlayController::class, 'join'])->middleware('throttle:play-join')->name('play.join');
 
     Route::scopeBindings()->group(function () {

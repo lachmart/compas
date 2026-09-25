@@ -4,7 +4,8 @@ import { unlockAudio } from '@/lib/feedback';
 
 // The station's text board (nature-trail style), read right after arriving.
 const props = defineProps({
-    // { title, text, images } — plain text, rendered escaped (no HTML).
+    // { title, text, images, photo? } — plain text, rendered escaped (no
+    // HTML); photo = the player's own task photo (journal only).
     info: { type: Object, required: true },
     // Re-reading from the journal: the button goes back instead of on.
     back: { type: Boolean, default: false },
@@ -39,7 +40,12 @@ const next = () => {
                 <p v-for="(paragraph, index) in paragraphs" :key="index" class="whitespace-pre-line break-words">{{ paragraph }}</p>
             </div>
 
-            <div v-if="info.images?.length" class="space-y-4" :class="{ 'mt-6': info.title || paragraphs.length }">
+            <div v-if="info.photo" :class="{ 'mt-6': info.title || paragraphs.length }">
+                <h2 class="mb-3 text-lg font-semibold text-teal-900">Tvoje fotka</h2>
+                <img :src="info.photo" alt="Tvoje fotka" class="w-full rounded-2xl object-cover ring-4 ring-orange-300" />
+            </div>
+
+            <div v-if="info.images?.length" class="space-y-4" :class="{ 'mt-6': info.title || paragraphs.length || info.photo }">
                 <img
                     v-for="(image, index) in info.images"
                     :key="index"

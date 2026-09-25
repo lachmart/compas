@@ -6,6 +6,7 @@ use App\Models\Game;
 use App\Models\Location;
 use App\Models\LocationAttempt;
 use App\Models\PlayerSession;
+use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
     $this->game = Game::factory()->create(['status' => GameStatus::Published]);
@@ -52,4 +53,42 @@ test('the game screen only says which stations have a text board', function () {
             ->where('locations.1.has_info', false)
             ->where('locations.2.has_info', true)
             ->missing('locations.2.info_text'));
+});
+
+test('a completed photo station shows the player\'s own photo, even without text', function () {
+    Storage::fake('local');
+    Storage::disk('local')->put('attempt-photos/mine.jpg', 'my-jpeg');
+    $photoAttempt = LocationAttempt::where('location_id', $this->plain->id)->first();
+    $photoAttempt->update(['submitted_photo_path' => 'attempt-photos/mine.jpg']);
+
+    $response = $this->withSession(['player_session_id' => $this->player->id])
+        ->getJson(route('play.journal', $this->game->slug))
+        ->assertJsonCount(2, 'entries')
+        ->assertJsonPath('entries.0.photo', null)
+        ->assertJsonPath('entries.1.position', 2)
+        ->assertJsonPath('entries.1.text', null)
+        ->assertJsonPath('entries.1.photo', route('play.photo', [$this->game->slug, $photoAttempt]));
+
+    $photo = $this->withSession(['player_session_id' => $this->player->id])->get($response->json('entries.1.photo'));
+    $photo->assertOk();
+    expect($photo->streamedContent())->toBe('my-jpeg')
+        ->and($photo->headers->get('Cache-Control'))->toContain('private');
+});
+
+test('a player cannot open someone else\'s photo', function () {
+    Storage::fake('local');
+    Storage::disk('local')->put('attempt-photos/theirs.jpg', 'x');
+    $other = PlayerSession::factory()->create(['game_id' => $this->game->id]);
+    $theirs = LocationAttempt::factory()->create([
+        'player_session_id' => $other->id,
+        'location_id' => $this->first->id,
+        'submitted_photo_path' => 'attempt-photos/theirs.jpg',
+    ]);
+
+    $this->withSession(['player_session_id' => $this->player->id])
+        ->get(route('play.photo', [$this->game->slug, $theirs]))
+        ->assertNotFound();
+
+    $this->flushSession();
+    $this->get(route('play.photo', [$this->game->slug, $theirs]))->assertForbidden();
 });

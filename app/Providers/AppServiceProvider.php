@@ -65,6 +65,8 @@ class AppServiceProvider extends ServiceProvider
             'play-pings' => [30, 1500],
             'play-actions' => [30, 600],
             'play-photo' => [6, 120],
+            // Viewing own photos in the journal (thumbnails + full size).
+            'play-media' => [120, 3000],
         ];
 
         foreach ($limits as $name => [$perSession, $perIp]) {

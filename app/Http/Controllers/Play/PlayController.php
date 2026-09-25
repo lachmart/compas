@@ -8,7 +8,9 @@ use App\Events\PlayerProgressed;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Play\JoinGameRequest;
 use App\Models\Game;
+use App\Models\LocationAttempt;
 use App\Models\PlayerSession;
+use App\Support\AttemptPhotos;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -49,9 +51,9 @@ class PlayController extends Controller
     }
 
     /**
-     * The text boards of the stations this player has completed, to read
-     * again. Boards of stations ahead are never sent (they may hold the clue
-     * to a password).
+     * The stations this player has completed that have something to look at
+     * again: the text board and/or the player's own photo. Boards of
+     * stations ahead are never sent (they may hold the clue to a password).
      */
     public function journal(Game $game)
     {
@@ -59,13 +61,16 @@ class PlayController extends Controller
 
         $completed = $playerSession->attempts()
             ->where('status', AttemptStatus::Completed)
-            ->pluck('location_id')
-            ->flip();
+            ->get()
+            ->keyBy('location_id');
 
         $entries = [];
 
         foreach ($game->locations()->get()->values() as $index => $location) {
-            if (! $completed->has($location->id) || ! $location->hasInfo()) {
+            $attempt = $completed->get($location->id);
+            $hasPhoto = $attempt?->submitted_photo_path !== null;
+
+            if (! $attempt || (! $location->hasInfo() && ! $hasPhoto)) {
                 continue;
             }
 
@@ -75,10 +80,21 @@ class PlayController extends Controller
                 'title' => $location->info_title,
                 'text' => $location->info_text,
                 'images' => collect($location->infoImages())->map(fn ($path) => Storage::disk('public')->url($path))->values()->all(),
+                'photo' => $hasPhoto ? route('play.photo', [$game->slug, $attempt]) : null,
             ];
         }
 
         return response()->json(['entries' => $entries]);
+    }
+
+    /** One of the player's own task photos — never anyone else's. */
+    public function photo(Game $game, LocationAttempt $attempt)
+    {
+        $playerSession = $this->resolvePlayerSession($game);
+
+        abort_unless($attempt->player_session_id === $playerSession->id && $attempt->submitted_photo_path, 404);
+
+        return AttemptPhotos::response($attempt->submitted_photo_path);
     }
 
     public function join(JoinGameRequest $request, Game $game)

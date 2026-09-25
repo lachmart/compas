@@ -63,11 +63,15 @@ onUnmounted(stopUnlockListeners);
 
 const currentLocation = computed(() => props.locations[currentIndex.value] ?? null);
 
-// The journal (text boards of passed stations) is offered once a passed
-// station has one.
+// The journal (text boards and own photos of passed stations) is offered
+// once a passed station has either.
+const PHOTO_TASKS = ['photo_of_something', 'selfie_doing_something'];
 const journalOpen = ref(false);
 const hasJournal = computed(() =>
-    props.locations.some((location, index) => location.has_info && (finished.value || index < currentIndex.value)),
+    props.locations.some(
+        (location, index) =>
+            (location.has_info || PHOTO_TASKS.includes(location.task_type)) && (finished.value || index < currentIndex.value),
+    ),
 );
 
 const onArrived = (data) => {
