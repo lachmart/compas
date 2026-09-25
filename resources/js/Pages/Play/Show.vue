@@ -15,6 +15,7 @@ import { helpSeen, markHelpSeen } from '@/lib/helpSeen';
 import RewardOverlay from '@/Components/Play/RewardOverlay.vue';
 import FinishScreen from '@/Components/Play/FinishScreen.vue';
 import { unlockAudio } from '@/lib/feedback';
+import { isPhotoTask } from '@/lib/taskTypes';
 import { usePositionPings } from '@/lib/usePositionPings';
 
 const props = defineProps({
@@ -78,12 +79,11 @@ const closeHelp = () => {
 
 // The journal (text boards and own photos of passed stations) is offered
 // once a passed station has either.
-const PHOTO_TASKS = ['photo_of_something', 'selfie_doing_something'];
 const journalOpen = ref(false);
 const hasJournal = computed(() =>
     props.locations.some(
         (location, index) =>
-            (location.has_info || PHOTO_TASKS.includes(location.task_type)) && (finished.value || index < currentIndex.value),
+            (location.has_info || isPhotoTask(location.task_type)) && (finished.value || index < currentIndex.value),
     ),
 );
 
@@ -188,7 +188,7 @@ const toggleView = () => {
         />
 
         <PhotoTask
-            v-else-if="activeTask && ['photo_of_something', 'selfie_doing_something'].includes(activeTask.task_type)"
+            v-else-if="activeTask && isPhotoTask(activeTask.task_type)"
             :reference-image="activeTask.reference_image"
             :task-type="activeTask.task_type"
             :game-slug="game.slug"

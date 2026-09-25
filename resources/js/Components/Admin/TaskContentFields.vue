@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import FileDrop from '@/Components/UI/FileDrop.vue';
 import { correctIndexAfterRemoval } from '@/lib/imageSelection';
+import { fileUrl, useImageTiles } from '@/lib/useImageTiles';
 
 const props = defineProps({
     taskType: String,
@@ -9,40 +10,19 @@ const props = defineProps({
     location: { type: Object, default: null },
 });
 
-const existingUrls = computed(() =>
-    Object.fromEntries((props.location?.images ?? []).map((image) => [image.path, image.url])),
-);
-
-const objectUrls = new WeakMap();
-const fileUrl = (file) => {
-    if (!objectUrls.has(file)) objectUrls.set(file, URL.createObjectURL(file));
-
-    return objectUrls.get(file);
-};
+// Same order the server uses for correct_index: kept images, then new uploads.
+const { tiles, removeAt: removeTile, add: onImagesAdded } = useImageTiles(props.form, {
+    existingKey: 'existing_images',
+    newKey: 'images',
+    stored: () => props.location?.images,
+});
 
 const removeAt = (index) => {
-    const keptCount = props.form.existing_images.length;
-
-    if (index < keptCount) {
-        props.form.existing_images = props.form.existing_images.filter((_, i) => i !== index);
-    } else {
-        props.form.images = props.form.images.filter((_, i) => i !== index - keptCount);
-    }
-
+    removeTile(index);
     props.form.correct_index = correctIndexAfterRemoval(props.form.correct_index, index);
 };
 
-// Same order the server uses for correct_index: kept images, then new uploads.
-const tiles = computed(() => [
-    ...props.form.existing_images.map((path) => ({ key: `existing:${path}`, src: existingUrls.value[path] })),
-    ...props.form.images.map((file, i) => ({ key: `new:${i}:${file.name}`, src: fileUrl(file) })),
-]);
-
 const total = computed(() => tiles.value.length);
-
-const onImagesAdded = (files) => {
-    props.form.images = [...props.form.images, ...files];
-};
 
 const currentReference = computed(() => props.location?.reference_image?.url ?? null);
 

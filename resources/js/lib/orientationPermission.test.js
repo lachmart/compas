@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { memoryStorage } from './testing/storage';
 
 // The module keeps in-memory state (grant, in-flight request, listeners), so
 // every test imports a fresh copy.
@@ -6,16 +7,6 @@ const load = async () => {
     vi.resetModules();
 
     return import('./orientationPermission');
-};
-
-const memoryStorage = () => {
-    const data = new Map();
-
-    return {
-        getItem: (key) => (data.has(key) ? data.get(key) : null),
-        setItem: (key, value) => data.set(key, String(value)),
-        removeItem: (key) => data.delete(key),
-    };
 };
 
 const iosLike = (requestPermission) => {

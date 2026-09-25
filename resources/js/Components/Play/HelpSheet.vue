@@ -1,4 +1,5 @@
 <script setup>
+import PlaySheet from '@/Components/Play/PlaySheet.vue';
 import { computed, ref } from 'vue';
 import { avatarEmoji } from '@/lib/avatars';
 import { useCameraPreference } from '@/lib/useCameraPreference';
@@ -43,62 +44,47 @@ const steps = computed(() => [
 </script>
 
 <template>
-    <div class="fixed inset-0 z-[1300] flex items-end justify-center bg-slate-900/40 p-4 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="help-title">
-        <div class="max-h-full w-full max-w-md overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
-            <div class="flex items-start justify-between gap-4">
-                <h2 id="help-title" class="text-2xl font-bold text-teal-900">Jak hrát</h2>
-                <button
-                    type="button"
-                    aria-label="Zavřít"
-                    class="-mr-2 -mt-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
-                    @click="emit('close')"
-                >
-                    <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-                        <path d="M6 6l12 12M18 6 6 18" />
-                    </svg>
-                </button>
-            </div>
+    <PlaySheet title="Jak hrát" @close="emit('close')">
 
-            <ol class="mt-4 space-y-4">
-                <li v-for="step in steps" :key="step.title" class="flex gap-3">
-                    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-teal-50 text-2xl" aria-hidden="true">{{ step.icon }}</span>
-                    <div>
-                        <p class="font-semibold text-slate-900">{{ step.title }}</p>
-                        <p class="text-sm text-slate-600">{{ step.text }}</p>
-                    </div>
-                </li>
-            </ol>
-
-            <div class="mt-6 rounded-2xl bg-slate-50 p-4">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <p class="font-semibold text-slate-900">Fotoaparát pro zaměřování</p>
-                        <p class="text-sm text-slate-600">{{ cameraOn ? 'Zapnutý' : 'Vypnutý' }} · nepovinný</p>
-                    </div>
-                    <button
-                        v-if="cameraOn"
-                        type="button"
-                        class="shrink-0 rounded-full px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 active:scale-95"
-                        @click="turnCameraOff"
-                    >Vypnout</button>
-                    <button
-                        v-else
-                        type="button"
-                        :disabled="cameraBusy"
-                        class="shrink-0 rounded-full bg-teal-600 px-4 py-2 text-sm font-semibold text-white active:scale-95 disabled:opacity-60"
-                        @click="turnCameraOn"
-                    >Zapnout</button>
+        <ol class="mt-4 space-y-4">
+            <li v-for="step in steps" :key="step.title" class="flex gap-3">
+                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-teal-50 text-2xl" aria-hidden="true">{{ step.icon }}</span>
+                <div>
+                    <p class="font-semibold text-slate-900">{{ step.title }}</p>
+                    <p class="text-sm text-slate-600">{{ step.text }}</p>
                 </div>
-                <p v-if="cameraBlocked" class="mt-3 text-sm text-amber-800" role="alert">
-                    Prohlížeč přístup ke kameře nepovolil. Povol fotoaparát v nastavení prohlížeče pro tuto stránku a zkus to znovu.
-                </p>
-            </div>
+            </li>
+        </ol>
 
-            <button
-                type="button"
-                class="mt-6 w-full rounded-full bg-gradient-to-b from-emerald-400 to-emerald-600 px-6 py-4 text-lg font-bold text-white shadow-lg shadow-emerald-700/30 active:scale-[0.98]"
-                @click="emit('close')"
-            >Rozumím, jdeme na to</button>
+        <div class="mt-6 rounded-2xl bg-slate-50 p-4">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <p class="font-semibold text-slate-900">Fotoaparát pro zaměřování</p>
+                    <p class="text-sm text-slate-600">{{ cameraOn ? 'Zapnutý' : 'Vypnutý' }} · nepovinný</p>
+                </div>
+                <button
+                    v-if="cameraOn"
+                    type="button"
+                    class="shrink-0 rounded-full px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 active:scale-95"
+                    @click="turnCameraOff"
+                >Vypnout</button>
+                <button
+                    v-else
+                    type="button"
+                    :disabled="cameraBusy"
+                    class="shrink-0 rounded-full bg-teal-600 px-4 py-2 text-sm font-semibold text-white active:scale-95 disabled:opacity-60"
+                    @click="turnCameraOn"
+                >Zapnout</button>
+            </div>
+            <p v-if="cameraBlocked" class="mt-3 text-sm text-amber-800" role="alert">
+                Prohlížeč přístup ke kameře nepovolil. Povol fotoaparát v nastavení prohlížeče pro tuto stránku a zkus to znovu.
+            </p>
         </div>
-    </div>
+
+        <button
+            type="button"
+            class="mt-6 w-full rounded-full bg-gradient-to-b from-emerald-400 to-emerald-600 px-6 py-4 text-lg font-bold text-white shadow-lg shadow-emerald-700/30 active:scale-[0.98]"
+            @click="emit('close')"
+        >Rozumím, jdeme na to</button>
+    </PlaySheet>
 </template>

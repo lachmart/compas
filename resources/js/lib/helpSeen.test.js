@@ -1,11 +1,6 @@
 import { expect, test } from 'vitest';
 import { helpSeen, markHelpSeen } from './helpSeen';
-
-const memoryStorage = () => {
-    const data = new Map();
-
-    return { getItem: (key) => data.get(key) ?? null, setItem: (key, value) => data.set(key, String(value)) };
-};
+import { brokenStorage, memoryStorage } from './testing/storage';
 
 test('the help is new until it has been seen', () => {
     const storage = memoryStorage();
@@ -16,7 +11,7 @@ test('the help is new until it has been seen', () => {
 });
 
 test('broken storage never pops the help up again and again', () => {
-    const broken = { getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('blocked'); } };
+    const broken = brokenStorage();
 
     expect(helpSeen(broken)).toBe(true);
     expect(() => markHelpSeen(broken)).not.toThrow();

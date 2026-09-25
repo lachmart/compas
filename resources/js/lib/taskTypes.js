@@ -6,6 +6,11 @@ export const TASK_TYPE_LABELS = {
     password: 'Zadat heslo',
 };
 
+// Task types where the player takes a photo (after a reference picture).
+export function isPhotoTask(type) {
+    return type === 'photo_of_something' || type === 'selfie_doing_something';
+}
+
 export function taskTypeLabel(type) {
     return TASK_TYPE_LABELS[type] ?? type;
 }

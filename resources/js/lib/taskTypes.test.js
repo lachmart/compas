@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { TASK_TYPE_LABELS, locationLabel, taskTypeLabel } from './taskTypes';
+import { TASK_TYPE_LABELS, isPhotoTask, locationLabel, taskTypeLabel } from './taskTypes';
 
 describe('taskTypeLabel', () => {
     test('translates all five task types', () => {
@@ -30,5 +30,14 @@ describe('locationLabel', () => {
         expect(locationLabel({ name: '' }, 2)).toBe('#2 Stanoviště 2');
         expect(locationLabel({ name: null }, 1)).toBe('#1 Stanoviště 1');
         expect(locationLabel({}, 4)).toBe('#4 Stanoviště 4');
+    });
+});
+
+describe('isPhotoTask', () => {
+    test('only the two photo types', () => {
+        expect(isPhotoTask('photo_of_something')).toBe(true);
+        expect(isPhotoTask('selfie_doing_something')).toBe(true);
+        expect(isPhotoTask('pick_image')).toBe(false);
+        expect(isPhotoTask('password')).toBe(false);
     });
 });

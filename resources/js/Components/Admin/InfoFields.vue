@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import FileDrop from '@/Components/UI/FileDrop.vue';
+import { useImageTiles } from '@/lib/useImageTiles';
 
 // The optional text board a player reads on arrival (nature-trail style).
 const props = defineProps({
@@ -13,36 +14,13 @@ const MAX_IMAGES = 6;
 // Collapsed for stations without a board, so the form stays short.
 const open = ref(Boolean(props.form.info_title || props.form.info_text || props.form.existing_info_images.length));
 
-const existingUrls = computed(() =>
-    Object.fromEntries((props.location?.info_images ?? []).map((image) => [image.path, image.url])),
-);
+const { tiles, removeAt, add } = useImageTiles(props.form, {
+    existingKey: 'existing_info_images',
+    newKey: 'info_images',
+    stored: () => props.location?.info_images,
+});
 
-const objectUrls = new WeakMap();
-const fileUrl = (file) => {
-    if (!objectUrls.has(file)) objectUrls.set(file, URL.createObjectURL(file));
-
-    return objectUrls.get(file);
-};
-
-// Same order the server keeps: kept pictures, then new uploads.
-const tiles = computed(() => [
-    ...props.form.existing_info_images.map((path) => ({ key: `existing:${path}`, src: existingUrls.value[path] })),
-    ...props.form.info_images.map((file, i) => ({ key: `new:${i}:${file.name}`, src: fileUrl(file) })),
-]);
-
-const removeAt = (index) => {
-    const keptCount = props.form.existing_info_images.length;
-
-    if (index < keptCount) {
-        props.form.existing_info_images = props.form.existing_info_images.filter((_, i) => i !== index);
-    } else {
-        props.form.info_images = props.form.info_images.filter((_, i) => i !== index - keptCount);
-    }
-};
-
-const onImagesAdded = (files) => {
-    props.form.info_images = [...props.form.info_images, ...files].slice(0, MAX_IMAGES - props.form.existing_info_images.length);
-};
+const onImagesAdded = (files) => add(files, MAX_IMAGES);
 
 const hasImageError = computed(() => Object.keys(props.form.errors).some((key) => key.startsWith('info_images') || key.startsWith('existing_info_images')));
 

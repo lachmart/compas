@@ -1,11 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { cameraPreference, requestCamera, setCameraPreference } from './cameraPreference';
-
-const memoryStorage = () => {
-    const data = new Map();
-
-    return { getItem: (key) => data.get(key) ?? null, setItem: (key, value) => data.set(key, String(value)) };
-};
+import { brokenStorage, memoryStorage } from './testing/storage';
 
 describe('cameraPreference', () => {
     test('is undecided until the player chooses', () => {
@@ -27,7 +22,7 @@ describe('cameraPreference', () => {
         storage.setItem('kompas.camera', 'maybe');
         expect(cameraPreference(storage)).toBeNull();
 
-        const broken = { getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('blocked'); } };
+        const broken = brokenStorage();
         expect(cameraPreference(broken)).toBeNull();
         expect(() => setCameraPreference('granted', broken)).not.toThrow();
     });

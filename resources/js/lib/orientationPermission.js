@@ -7,6 +7,8 @@
 // grant is kept in memory and in sessionStorage (for reloads within the tab).
 // Android/desktop browsers without requestPermission need no prompt at all.
 
+import { readStorage, writeStorage } from '@/lib/safeStorage';
+
 const STORAGE_KEY = 'kompas.orientation';
 
 let grantedInMemory = false;
@@ -17,23 +19,13 @@ const orientationEvent = () => globalThis.DeviceOrientationEvent;
 
 const hasRequestPermission = () => typeof orientationEvent()?.requestPermission === 'function';
 
-const storedGrant = () => {
-    try {
-        return globalThis.sessionStorage?.getItem(STORAGE_KEY) === 'granted';
-    } catch {
-        return false;
-    }
-};
+const storedGrant = () => readStorage(globalThis.sessionStorage, STORAGE_KEY) === 'granted';
 
 const rememberGrant = () => {
     grantedInMemory = true;
 
-    try {
-        globalThis.sessionStorage?.setItem(STORAGE_KEY, 'granted');
-    } catch {
-        // Private mode / blocked storage: the in-memory flag still covers
-        // this page load.
-    }
+    // Blocked storage: the in-memory flag still covers this page load.
+    writeStorage(globalThis.sessionStorage, STORAGE_KEY, 'granted');
 
     listeners.forEach((listener) => listener());
 };
