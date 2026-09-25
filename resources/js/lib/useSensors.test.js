@@ -40,6 +40,7 @@ beforeEach(() => {
 afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     delete globalThis.DeviceOrientationEvent;
     delete globalThis.window;
     delete globalThis.sessionStorage;
@@ -130,4 +131,76 @@ test('a tap that ends in a denial stops offering the pulsing tap', async () => {
     expect(sensors.needsTap.value).toBe(false);
     expect(sensors.compassDenied.value).toBe(true);
     expect(sensors.orientationSupported.value).toBe(false);
+});
+
+// --- Shared streams (battery) and pausing while the page is hidden -------------
+
+const withGeolocation = () => {
+    const geolocation = { watchPosition: vi.fn(() => 7), clearWatch: vi.fn() };
+    vi.stubGlobal('navigator', { geolocation });
+
+    return geolocation;
+};
+
+const withDocument = () => {
+    const doc = Object.assign(new EventTarget(), { visibilityState: 'visible' });
+    vi.stubGlobal('document', doc);
+
+    return {
+        hide: () => {
+            doc.visibilityState = 'hidden';
+            doc.dispatchEvent(new Event('visibilitychange'));
+        },
+        show: () => {
+            doc.visibilityState = 'visible';
+            doc.dispatchEvent(new Event('visibilitychange'));
+        },
+    };
+};
+
+test('every screen shares one geolocation watch', async () => {
+    const geolocation = withGeolocation();
+    const first = await setup();
+    const { useSensors } = await import('./useSensors');
+    const second = useSensors();
+
+    first.requestPermissions();
+    second.requestPermissions();
+
+    expect(geolocation.watchPosition).toHaveBeenCalledTimes(1);
+});
+
+test('a hidden page stops the sensors and a visible one restarts them', async () => {
+    const geolocation = withGeolocation();
+    const page = withDocument();
+    const sensors = await setup();
+
+    sensors.requestPermissions();
+    expect(geolocation.watchPosition).toHaveBeenCalledTimes(1);
+
+    page.hide();
+    expect(geolocation.clearWatch).toHaveBeenCalledWith(7);
+    target.dispatchEvent(orientationEvent({ alpha: 10, beta: 5, gamma: 1 }));
+    expect(sensors.heading.value).toBeNull();
+
+    page.show();
+    expect(geolocation.watchPosition).toHaveBeenCalledTimes(2);
+    target.dispatchEvent(orientationEvent({ alpha: 10, beta: 5, gamma: 1 }));
+    expect(sensors.heading.value).toBe(350);
+});
+
+test('orientation bursts are thinned, the last reading always lands', async () => {
+    const { ORIENTATION_EMIT_MS } = await import('./useSensors');
+    const sensors = await setup();
+
+    sensors.requestPermissions();
+    target.dispatchEvent(orientationEvent({ alpha: 10, beta: 5, gamma: 1 }));
+    expect(sensors.heading.value).toBe(350);
+
+    target.dispatchEvent(orientationEvent({ alpha: 20, beta: 5, gamma: 1 }));
+    target.dispatchEvent(orientationEvent({ alpha: 30, beta: 5, gamma: 1 }));
+    expect(sensors.heading.value).toBe(350);
+
+    await vi.advanceTimersByTimeAsync(ORIENTATION_EMIT_MS);
+    expect(sensors.heading.value).toBe(330);
 });
