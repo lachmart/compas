@@ -78,13 +78,32 @@ const switchTo = (id) => {
     mapRef.value?.flyTo(location.lat, location.lng);
 };
 
+// Bumped for every new-station form, so "save and add another" gets a
+// fresh, empty form instead of reusing the one just saved.
+const addFormCount = ref(0);
+
+const openAddForm = () => {
+    addFormCount.value++;
+    state.value = addState();
+};
+
 const startAdding = () => {
     // Already adding: keep the new station being placed.
     if (state.value.panel === 'add') return;
 
-    leaveFormThen(() => {
-        state.value = addState();
-    });
+    leaveFormThen(openAddForm);
+};
+
+// The map button: while adding it saves the new station and starts the next
+// one (on validation errors the form stays open with them).
+const onMapAddClick = () => {
+    if (state.value.panel === 'add') {
+        formRef.value?.save(openAddForm);
+
+        return;
+    }
+
+    startAdding();
 };
 
 const backToList = () => {
@@ -191,7 +210,7 @@ const confirmDelete = () => {
                 <LocationForm
                     v-if="formOpen"
                     ref="formRef"
-                    :key="state.panel === 'edit' ? `edit:${state.selectedId}` : 'add'"
+                    :key="state.panel === 'edit' ? `edit:${state.selectedId}` : `add:${addFormCount}`"
                     :game="game"
                     :location="selectedLocation"
                     :position="selectedIndex + 1"
@@ -227,15 +246,14 @@ const confirmDelete = () => {
 
                 <!-- Always at hand: add a station from any panel. -->
                 <button
-                    v-if="state.panel !== 'add'"
                     type="button"
                     class="absolute bottom-4 left-3 z-[1000] inline-flex items-center gap-1.5 rounded-full bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg ring-2 ring-white transition hover:bg-teal-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-teal-300"
-                    @click="startAdding"
+                    @click="onMapAddClick"
                 >
                     <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
                     </svg>
-                    Přidat stanoviště
+                    {{ state.panel === 'add' ? 'Uložit a přidat další' : 'Přidat stanoviště' }}
                 </button>
 
                 <button
