@@ -25,16 +25,10 @@ export const addStateAt = (lat, lng) => {
     return { ...state, draft: { ...state.draft, lat, lng } };
 };
 
-// What a click on an empty spot of the editor map does. Stations only move
-// by dragging their marker; the click is "save and add another":
-//   'place'         the new station has no position yet — put it here
-//   'save-then-add' save the open form, then start a new station here
-//   'add'           nothing to save — start a new station here
-export function mapClickAction(state, unsavedChanges) {
-    if (state.panel === 'add') return state.draft?.lat == null ? 'place' : 'save-then-add';
-    if (state.panel === 'edit' && unsavedChanges) return 'save-then-add';
-
-    return 'add';
+// A new station without a position yet: a click on the map places it
+// (any other click on the map means "save and add another").
+export function isPlacingNewStation(state) {
+    return state.panel === 'add' && state.draft?.lat == null;
 }
 
 export const mapModeFor = (panel) => (panel === 'list' ? 'view' : panel === 'add' ? 'place' : 'edit');

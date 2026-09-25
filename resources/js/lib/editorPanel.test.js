@@ -10,7 +10,7 @@ import {
     radiusSliderMax,
     reconcileWithLocations,
     addStateAt,
-    mapClickAction,
+    isPlacingNewStation,
 } from './editorPanel';
 
 const location = { id: 7, lat: 50.1, lng: 14.4, arrival_radius_m: 25, name: 'Dub' };
@@ -132,23 +132,11 @@ describe('addStateAt', () => {
     });
 });
 
-describe('mapClickAction', () => {
-    test('an unplaced new station is placed by the click', () => {
-        expect(mapClickAction(addState(), false)).toBe('place');
-    });
-
-    test('a placed new station is saved and the next one starts', () => {
-        expect(mapClickAction(addStateAt(50, 14), false)).toBe('save-then-add');
-    });
-
-    test('an edited station with changes is saved first; stations never move by a click', () => {
-        const location = { id: 3, lat: 50, lng: 14, arrival_radius_m: 15 };
-
-        expect(mapClickAction(editState(location), true)).toBe('save-then-add');
-        expect(mapClickAction(editState(location), false)).toBe('add');
-    });
-
-    test('from the list a click starts a new station', () => {
-        expect(mapClickAction(listState(), false)).toBe('add');
+describe('isPlacingNewStation', () => {
+    test('only a new station without a position is placed by a click', () => {
+        expect(isPlacingNewStation(addState())).toBe(true);
+        expect(isPlacingNewStation(addStateAt(50, 14))).toBe(false);
+        expect(isPlacingNewStation(editState({ id: 3, lat: 50, lng: 14, arrival_radius_m: 15 }))).toBe(false);
+        expect(isPlacingNewStation(listState())).toBe(false);
     });
 });

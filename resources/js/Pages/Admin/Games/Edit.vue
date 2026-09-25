@@ -6,13 +6,11 @@ import ConfirmDialog from '@/Components/Admin/ConfirmDialog.vue';
 import GameHeader from '@/Components/Admin/GameHeader.vue';
 import GameMap from '@/Components/Admin/GameMap.vue';
 import GameSettings from '@/Components/Admin/GameSettings.vue';
-import Modal from '@/Components/Modal.vue';
-import Button from '@/Components/UI/Button.vue';
 import LocationForm from '@/Components/Admin/LocationForm.vue';
 import LocationList from '@/Components/Admin/LocationList.vue';
 import SharePanel from '@/Components/Admin/SharePanel.vue';
 import SegmentedTabs from '@/Components/UI/SegmentedTabs.vue';
-import { addState, addStateAt, editState, hasUnsavedChanges, listState, mapClickAction, mapModeFor, reconcileWithLocations } from '@/lib/editorPanel';
+import { addState, addStateAt, editState, hasUnsavedChanges, isPlacingNewStation, listState, mapModeFor, reconcileWithLocations } from '@/lib/editorPanel';
 import { locationLabel } from '@/lib/taskTypes';
 
 const props = defineProps({
@@ -49,14 +47,14 @@ const mapHint = computed(() => {
     return null;
 });
 
-// Leaving the open form (another station, or a new one) would drop its
-// unsaved changes: ask first (save / discard / stay). `action` runs once
-// the way is clear.
-const pendingAction = ref(null);
-
+// Leaving the open form (another station, or a new one) saves its unsaved
+// changes first; `action` runs once saved. On validation errors the form
+// stays open with them and `action` is dropped.
 const leaveFormThen = (action) => {
+    if (formRef.value?.isSaving()) return;
+
     if (hasUnsavedChanges(state.value, selectedLocation.value, Boolean(formRef.value?.isDirty()))) {
-        pendingAction.value = action;
+        formRef.value.save(action);
         return;
     }
 
@@ -86,26 +84,16 @@ const openAddForm = (at = null) => {
     state.value = at ? addStateAt(at.lat, at.lng) : addState();
 };
 
-// A click on an empty spot of the map: place the new station, or "save and
-// add another" right there. Stations only move by dragging (see
-// mapClickAction()).
+// A click on an empty spot of the map places the new station being added;
+// otherwise it is "save and add another" right there. Stations only move by
+// dragging their marker.
 const onMapClick = (point) => {
-    // Clicks while a save is on its way would save the same station twice.
-    if (formRef.value?.isSaving()) return;
-
-    const unsaved = hasUnsavedChanges(state.value, selectedLocation.value, Boolean(formRef.value?.isDirty()));
-
-    switch (mapClickAction(state.value, unsaved)) {
-        case 'place':
-            onMapDraft(point);
-            break;
-        case 'save-then-add':
-            // On validation errors the form stays open and shows them.
-            formRef.value?.save(() => openAddForm(point));
-            break;
-        default:
-            openAddForm(point);
+    if (isPlacingNewStation(state.value)) {
+        onMapDraft(point);
+        return;
     }
+
+    leaveFormThen(() => openAddForm(point));
 };
 
 const startAdding = () => {
@@ -131,18 +119,6 @@ const backToList = () => {
     state.value = listState();
 };
 
-const saveAndContinue = () => {
-    const action = pendingAction.value;
-    pendingAction.value = null;
-    // On validation errors the form stays open and shows them.
-    formRef.value?.save(action);
-};
-
-const discardAndContinue = () => {
-    const action = pendingAction.value;
-    pendingAction.value = null;
-    action();
-};
 
 // GameMap only reports { lat, lng }; keep the radius.
 const onMapDraft = (position) => {
@@ -292,18 +268,6 @@ const confirmDelete = () => {
                 </button>
             </div>
         </div>
-
-        <Modal :show="pendingAction !== null" max-width="md" @close="pendingAction = null">
-            <div class="space-y-4 p-6">
-                <p class="font-semibold text-slate-900">Stanoviště má neuložené změny</p>
-                <p class="text-sm text-slate-600">Chceš je uložit, nebo zahodit, než budeš pokračovat?</p>
-                <div class="flex flex-wrap justify-end gap-3">
-                    <Button variant="ghost" type="button" @click="pendingAction = null">Zůstat</Button>
-                    <Button variant="secondary" type="button" class="!text-red-600" @click="discardAndContinue">Zahodit změny</Button>
-                    <Button type="button" @click="saveAndContinue">Uložit a pokračovat</Button>
-                </div>
-            </div>
-        </Modal>
 
         <ConfirmDialog
             :show="pendingDelete !== null"
