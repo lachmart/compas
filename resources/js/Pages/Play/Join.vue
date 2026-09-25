@@ -5,7 +5,7 @@ import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import PermissionsSheet from '@/Components/Play/PermissionsSheet.vue';
 import { AVATARS } from '@/lib/avatars';
 import { unlockAudio } from '@/lib/feedback';
-import { setCameraPreference } from '@/lib/cameraPreference';
+import { useCameraPreference } from '@/lib/useCameraPreference';
 import { requestOrientationPermission } from '@/lib/orientationPermission';
 
 const props = defineProps({
@@ -84,23 +84,10 @@ const play = () => {
     askingPermissions.value = true;
 };
 
-// The camera is only asked for now, never by surprise later: a refusal (or
-// "without camera") is remembered and the AR view keeps its plain background.
-const askForCamera = () => {
-    if (!navigator.mediaDevices?.getUserMedia) {
-        setCameraPreference('declined');
-
-        return;
-    }
-
-    navigator.mediaDevices
-        .getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false })
-        .then((stream) => {
-            stream.getTracks().forEach((track) => track.stop());
-            setCameraPreference('granted');
-        })
-        .catch(() => setCameraPreference('declined'));
-};
+// The camera is only asked for now (or later from the help), never by
+// surprise: a refusal or "without camera" is remembered and the AR view keeps
+// its plain background.
+const { enableCamera, disableCamera } = useCameraPreference();
 
 const startGame = (withCamera) => {
     unlockAudio();
@@ -116,9 +103,9 @@ const startGame = (withCamera) => {
     );
 
     if (withCamera) {
-        askForCamera();
+        enableCamera();
     } else {
-        setCameraPreference('declined');
+        disableCamera();
     }
 
     form.post(route('play.join', props.game.slug), {

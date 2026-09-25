@@ -1,6 +1,7 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { avatarEmoji } from '@/lib/avatars';
+import { useCameraPreference } from '@/lib/useCameraPreference';
 
 // "How to play": opens by itself before the first game and later from the
 // player's animal in the HUD.
@@ -8,6 +9,26 @@ const props = defineProps({
     avatar: { type: String, default: null },
 });
 const emit = defineEmits(['close']);
+
+// Change of mind about the camera (AR aim): switch it on or off here.
+const { preference: cameraChoice, enableCamera, disableCamera } = useCameraPreference();
+const cameraOn = computed(() => cameraChoice.value !== 'declined');
+const cameraBusy = ref(false);
+const cameraBlocked = ref(false);
+
+const turnCameraOn = async () => {
+    // Called straight from the tap, so the browser may show its prompt.
+    cameraBusy.value = true;
+    cameraBlocked.value = false;
+    const result = await enableCamera();
+    cameraBusy.value = false;
+    cameraBlocked.value = result !== 'granted';
+};
+
+const turnCameraOff = () => {
+    cameraBlocked.value = false;
+    disableCamera();
+};
 
 const steps = computed(() => [
     { icon: '\u{1F9ED}', title: 'Jdi za šipkou', text: 'Šipka ukazuje směr k dalšímu stanovišti. Drž telefon naplocho před sebou.' },
@@ -47,6 +68,31 @@ const steps = computed(() => [
                     </div>
                 </li>
             </ol>
+
+            <div class="mt-6 rounded-2xl bg-slate-50 p-4">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <p class="font-semibold text-slate-900">Fotoaparát pro zaměřování</p>
+                        <p class="text-sm text-slate-600">{{ cameraOn ? 'Zapnutý' : 'Vypnutý' }} · nepovinný</p>
+                    </div>
+                    <button
+                        v-if="cameraOn"
+                        type="button"
+                        class="shrink-0 rounded-full px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 active:scale-95"
+                        @click="turnCameraOff"
+                    >Vypnout</button>
+                    <button
+                        v-else
+                        type="button"
+                        :disabled="cameraBusy"
+                        class="shrink-0 rounded-full bg-teal-600 px-4 py-2 text-sm font-semibold text-white active:scale-95 disabled:opacity-60"
+                        @click="turnCameraOn"
+                    >Zapnout</button>
+                </div>
+                <p v-if="cameraBlocked" class="mt-3 text-sm text-amber-800" role="alert">
+                    Prohlížeč přístup ke kameře nepovolil. Povol fotoaparát v nastavení prohlížeče pro tuto stránku a zkus to znovu.
+                </p>
+            </div>
 
             <button
                 type="button"

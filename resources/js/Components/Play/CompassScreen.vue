@@ -4,7 +4,7 @@ import { arrowRotationDegrees, bearingDegrees, distanceMeters } from '@/lib/geo'
 import { aimTarget, cameraHeading, nextPosture, smoothAngle } from '@/lib/orientation';
 import { HEAT_LEVELS, heatGradient, heatLevel } from '@/lib/proximity';
 import { isSessionGone, reloadForGoneSession } from '@/lib/playSession';
-import { cameraPreference } from '@/lib/cameraPreference';
+import { useCameraPreference } from '@/lib/useCameraPreference';
 import { useSensors } from '@/lib/useSensors';
 import ArAim from '@/Components/Play/ArAim.vue';
 import ArrivalRing from '@/Components/Play/ArrivalRing.vue';
@@ -72,9 +72,11 @@ watch([arMode, cameraDirection, bearing], () => {
     aim.value = arMode.value ? aimTarget(bearing.value, cameraDirection.value, aim.value?.aligned ?? false) : null;
 });
 
-// A refused or missing camera isn't asked for again on every tilt, and a
-// player who chose "without camera" on the join screen is never asked.
-const cameraUnavailable = ref(cameraPreference() === 'declined');
+// A player who chose "without camera" (join screen or help) is never asked;
+// a camera that fails is switched off the same way, so it isn't asked for
+// again on every tilt. The help can switch it back on.
+const { preference: cameraChoice, disableCamera } = useCameraPreference();
+const cameraOn = computed(() => cameraChoice.value !== 'declined');
 
 // Hot/cold background: one layer per heat level, crossfaded by opacity
 // (gradients themselves can't be CSS-transitioned).
@@ -198,7 +200,7 @@ onUnmounted(() => {
 
         <!-- Upright: the camera picture (the heat colours stay behind it if
              there's no camera) with the AR aim on top. -->
-        <CameraFeed v-if="aim && !cameraUnavailable" class="absolute inset-0" @unavailable="cameraUnavailable = true" />
+        <CameraFeed v-if="aim && cameraOn" class="absolute inset-0" @unavailable="disableCamera" />
 
         <ErrorFlash :show="hasArrivalError" />
 

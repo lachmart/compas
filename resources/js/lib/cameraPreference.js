@@ -21,3 +21,27 @@ export function setCameraPreference(value, storage = globalThis.localStorage) {
         // Private mode / blocked storage: the choice just isn't remembered.
     }
 }
+
+// Asks the browser for the camera (call it from a tap) and remembers the
+// answer. Resolves to 'granted', 'blocked' (the browser refused — also
+// without asking when the player refused earlier; only its site settings
+// can undo that) or 'unsupported'.
+export async function requestCamera(mediaDevices = globalThis.navigator?.mediaDevices, storage = globalThis.localStorage) {
+    if (!mediaDevices?.getUserMedia) {
+        setCameraPreference('declined', storage);
+
+        return 'unsupported';
+    }
+
+    try {
+        const stream = await mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+        stream.getTracks().forEach((track) => track.stop());
+        setCameraPreference('granted', storage);
+
+        return 'granted';
+    } catch {
+        setCameraPreference('declined', storage);
+
+        return 'blocked';
+    }
+}
