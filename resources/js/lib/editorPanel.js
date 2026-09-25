@@ -18,6 +18,25 @@ export const addState = () => ({
     draft: { lat: null, lng: null, arrival_radius_m: DEFAULT_RADIUS_M },
 });
 
+// A new station already placed where the dozor clicked.
+export const addStateAt = (lat, lng) => {
+    const state = addState();
+
+    return { ...state, draft: { ...state.draft, lat, lng } };
+};
+
+// What a click on an empty spot of the editor map does. Stations only move
+// by dragging their marker; the click is "save and add another":
+//   'place'         the new station has no position yet — put it here
+//   'save-then-add' save the open form, then start a new station here
+//   'add'           nothing to save — start a new station here
+export function mapClickAction(state, unsavedChanges) {
+    if (state.panel === 'add') return state.draft?.lat == null ? 'place' : 'save-then-add';
+    if (state.panel === 'edit' && unsavedChanges) return 'save-then-add';
+
+    return 'add';
+}
+
 export const mapModeFor = (panel) => (panel === 'list' ? 'view' : panel === 'add' ? 'place' : 'edit');
 
 // After the locations prop changes (save, delete, reorder) keep the current

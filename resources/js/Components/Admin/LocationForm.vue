@@ -37,7 +37,7 @@ const form = useForm({
 
 // Lets the editor ask before discarding edits when another station is
 // clicked on the map, and save them first when asked to (see save()).
-defineExpose({ isDirty: () => form.isDirty, save: (afterSave) => save(afterSave) });
+defineExpose({ isDirty: () => form.isDirty, isSaving: () => form.processing, save: (afterSave) => save(afterSave) });
 
 const heading = computed(() =>
     props.location ? `Upravuješ: ${locationLabel(props.location, props.position)}` : 'Nové stanoviště',

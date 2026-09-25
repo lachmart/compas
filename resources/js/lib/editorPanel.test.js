@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
+    DEFAULT_RADIUS_M,
     addState,
     deleteGameWarning,
     editState,
@@ -8,6 +9,8 @@ import {
     mapModeFor,
     radiusSliderMax,
     reconcileWithLocations,
+    addStateAt,
+    mapClickAction,
 } from './editorPanel';
 
 const location = { id: 7, lat: 50.1, lng: 14.4, arrival_radius_m: 25, name: 'Dub' };
@@ -116,5 +119,36 @@ describe('hasUnsavedChanges', () => {
     test('an edit without its location only blocks when the form is dirty', () => {
         expect(hasUnsavedChanges(editState(location), null, false)).toBe(false);
         expect(hasUnsavedChanges(editState(location), null, true)).toBe(true);
+    });
+});
+
+describe('addStateAt', () => {
+    test('a new station placed at the given point', () => {
+        expect(addStateAt(50.1, 14.2)).toEqual({
+            panel: 'add',
+            selectedId: null,
+            draft: { lat: 50.1, lng: 14.2, arrival_radius_m: DEFAULT_RADIUS_M },
+        });
+    });
+});
+
+describe('mapClickAction', () => {
+    test('an unplaced new station is placed by the click', () => {
+        expect(mapClickAction(addState(), false)).toBe('place');
+    });
+
+    test('a placed new station is saved and the next one starts', () => {
+        expect(mapClickAction(addStateAt(50, 14), false)).toBe('save-then-add');
+    });
+
+    test('an edited station with changes is saved first; stations never move by a click', () => {
+        const location = { id: 3, lat: 50, lng: 14, arrival_radius_m: 15 };
+
+        expect(mapClickAction(editState(location), true)).toBe('save-then-add');
+        expect(mapClickAction(editState(location), false)).toBe('add');
+    });
+
+    test('from the list a click starts a new station', () => {
+        expect(mapClickAction(listState(), false)).toBe('add');
     });
 });

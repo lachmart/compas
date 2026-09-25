@@ -17,7 +17,10 @@ const props = defineProps({
     },
     showRadii: { type: Boolean, default: true },
 });
-const emit = defineEmits(['select', 'update:draft']);
+// select: a station marker was clicked; update:draft: the draft marker was
+// dragged; map-click: an empty spot was clicked ({ lat, lng }) — the editor
+// decides what that does (markers don't pass their clicks on to the map).
+const emit = defineEmits(['select', 'update:draft', 'map-click']);
 
 const CZ_CENTER = [49.8, 15.5];
 const FIT_OPTIONS = { padding: [60, 60], maxZoom: 17 };
@@ -43,8 +46,6 @@ const scene = computed(() => mapScene({
     draft: props.draft,
     mode: props.mode,
 }));
-
-const picking = computed(() => props.mode === 'edit' || props.mode === 'place');
 
 const radiusCircle = (lat, lng, radius, color) => L.circle([lat, lng], {
     radius,
@@ -121,16 +122,15 @@ const updateDraftRadius = () => {
     else drawDraft();
 };
 
-const updateCursor = () => {
-    if (!map) return;
-    // Inline style so it wins over Leaflet's grab cursor. Never bind :class on
-    // the map element — Vue would overwrite Leaflet's own classes.
-    map.getContainer().style.cursor = picking.value ? 'crosshair' : '';
+const setCursor = () => {
+    // A click on the map always places something. Inline style so it wins
+    // over Leaflet's grab cursor. Never bind :class on the map element — Vue
+    // would overwrite Leaflet's own classes.
+    map.getContainer().style.cursor = 'crosshair';
 };
 
 const onMapClick = (e) => {
-    if (!picking.value) return;
-    emit('update:draft', { lat: e.latlng.lat, lng: e.latlng.lng });
+    emit('map-click', { lat: e.latlng.lat, lng: e.latlng.lng });
 };
 
 const fitAll = () => {
@@ -171,7 +171,9 @@ const setInitialView = () => {
 onMounted(() => {
     isMounted = true;
 
-    map = L.map(mapEl.value);
+    // No double-click zoom: a click on the map adds a station, so a double
+    // click would add one and save it straight away.
+    map = L.map(mapEl.value, { doubleClickZoom: false });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap',
         maxZoom: 19,
@@ -185,7 +187,7 @@ onMounted(() => {
 
     setInitialView();
     redraw();
-    updateCursor();
+    setCursor();
 
     // The editor layout resizes the map (mobile ↔ desktop, panel changes).
     resizeObserver = new ResizeObserver(() => map?.invalidateSize());
@@ -218,7 +220,6 @@ watch(
 );
 watch(() => props.draft?.arrival_radius_m, updateDraftRadius);
 watch(() => props.showRadii, drawLocations);
-watch(picking, updateCursor);
 
 defineExpose({ fitAll, flyTo });
 </script>

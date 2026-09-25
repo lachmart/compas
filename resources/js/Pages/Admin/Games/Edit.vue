@@ -12,7 +12,7 @@ import LocationForm from '@/Components/Admin/LocationForm.vue';
 import LocationList from '@/Components/Admin/LocationList.vue';
 import SharePanel from '@/Components/Admin/SharePanel.vue';
 import SegmentedTabs from '@/Components/UI/SegmentedTabs.vue';
-import { addState, editState, hasUnsavedChanges, listState, mapModeFor, reconcileWithLocations } from '@/lib/editorPanel';
+import { addState, addStateAt, editState, hasUnsavedChanges, listState, mapClickAction, mapModeFor, reconcileWithLocations } from '@/lib/editorPanel';
 import { locationLabel } from '@/lib/taskTypes';
 
 const props = defineProps({
@@ -42,10 +42,9 @@ const tabs = computed(() => [
 ]);
 
 const mapHint = computed(() => {
-    if (state.value.panel === 'add') {
-        return state.value.draft?.lat == null ? 'Klikni do mapy, kam stanoviště umístit' : 'Přetáhni značku nebo klikni jinam';
-    }
-    if (state.value.panel === 'edit') return 'Přetáhni značku nebo klikni do mapy';
+    if (state.value.panel === 'add' && state.value.draft?.lat == null) return 'Klikni do mapy, kam stanoviště umístit';
+    if (state.value.panel === 'add') return 'Přesun přetažením · klik jinam uloží a přidá další';
+    if (state.value.panel === 'edit') return 'Přesun přetažením značky · klik do mapy přidá další';
 
     return null;
 });
@@ -82,23 +81,45 @@ const switchTo = (id) => {
 // fresh, empty form instead of reusing the one just saved.
 const addFormCount = ref(0);
 
-const openAddForm = () => {
+const openAddForm = (at = null) => {
     addFormCount.value++;
-    state.value = addState();
+    state.value = at ? addStateAt(at.lat, at.lng) : addState();
+};
+
+// A click on an empty spot of the map: place the new station, or "save and
+// add another" right there. Stations only move by dragging (see
+// mapClickAction()).
+const onMapClick = (point) => {
+    // Clicks while a save is on its way would save the same station twice.
+    if (formRef.value?.isSaving()) return;
+
+    const unsaved = hasUnsavedChanges(state.value, selectedLocation.value, Boolean(formRef.value?.isDirty()));
+
+    switch (mapClickAction(state.value, unsaved)) {
+        case 'place':
+            onMapDraft(point);
+            break;
+        case 'save-then-add':
+            // On validation errors the form stays open and shows them.
+            formRef.value?.save(() => openAddForm(point));
+            break;
+        default:
+            openAddForm(point);
+    }
 };
 
 const startAdding = () => {
     // Already adding: keep the new station being placed.
     if (state.value.panel === 'add') return;
 
-    leaveFormThen(openAddForm);
+    leaveFormThen(() => openAddForm());
 };
 
 // The map button: while adding it saves the new station and starts the next
 // one (on validation errors the form stays open with them).
 const onMapAddClick = () => {
     if (state.value.panel === 'add') {
-        formRef.value?.save(openAddForm);
+        formRef.value?.save(() => openAddForm());
 
         return;
     }
@@ -232,6 +253,7 @@ const confirmDelete = () => {
                     :mode="mapMode"
                     @select="openLocation"
                     @update:draft="onMapDraft"
+                    @map-click="onMapClick"
                 />
 
                 <div class="pointer-events-none absolute inset-x-0 top-3 z-[1000] flex justify-center px-14">
