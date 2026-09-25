@@ -8,10 +8,9 @@ export const UPRIGHT_ENTER_DEG = 70;
 export const UPRIGHT_EXIT_DEG = 50;
 // Horizontal field of view the camera screen maps the world onto.
 export const AR_FOV_DEG = 50;
-// Aimed at the target (enter / leave, hysteresis against flicker). Phone
-// compasses wobble by several degrees, so tighter than this is unreachable.
-export const AIM_DEG = 8;
-export const AIM_EXIT_DEG = 12;
+// Aimed at the target (enter / leave, hysteresis against flicker).
+export const AIM_DEG = 5;
+export const AIM_EXIT_DEG = 8;
 export const BEHIND_DEG = 135;
 
 const RAD = Math.PI / 180;
@@ -30,6 +29,18 @@ export function cameraHeading(alpha, beta, gamma) {
     const north = -(sa * sg - ca * sb * cg);
 
     return normalize360(Math.atan2(east, north) / RAD);
+}
+
+// Direction the back camera faces, for the upright AR view. iOS reports its
+// own compass heading (webkitCompassHeading), which already follows the
+// camera when the phone is upright; combining it with beta/gamma instead
+// made the target jump, because iOS flips gamma as the phone passes
+// vertical. Other browsers give Euler angles, turned into the camera
+// direction by cameraHeading().
+export function arCameraHeading({ alpha, beta, gamma, compassHeading }) {
+    if (typeof compassHeading === 'number') return normalize360(compassHeading);
+
+    return cameraHeading(alpha, beta, gamma);
 }
 
 // Angle between the device's z axis (out of the screen) and straight up:
@@ -94,7 +105,8 @@ export function absoluteOrientation(event) {
     if (typeof beta !== 'number' || typeof gamma !== 'number') return null;
 
     if (typeof webkitCompassHeading === 'number') {
-        return { alpha: normalize360(360 - webkitCompassHeading), beta, gamma };
+        // compassHeading is kept as iOS reports it: see arCameraHeading().
+        return { alpha: normalize360(360 - webkitCompassHeading), beta, gamma, compassHeading: webkitCompassHeading };
     }
 
     if (absolute === true && typeof alpha === 'number') {

@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { arrowRotationDegrees, bearingDegrees, distanceMeters } from '@/lib/geo';
-import { aimTarget, cameraHeading, nextPosture, smoothAngle } from '@/lib/orientation';
+import { aimTarget, arCameraHeading, nextPosture, smoothAngle } from '@/lib/orientation';
 import { HEAT_LEVELS, heatGradient, heatLevel } from '@/lib/proximity';
 import { isSessionGone, reloadForGoneSession } from '@/lib/playSession';
 import { useCameraPreference } from '@/lib/useCameraPreference';
@@ -28,6 +28,13 @@ const distance = computed(() => {
 
     return distanceMeters(position.value.lat, position.value.lng, props.location.lat, props.location.lng);
 });
+
+// What the player sees: the distance still to walk, to the edge of the
+// arrival circle — it reads 0 m exactly when the arrival countdown starts.
+// Arrival itself is decided on `distance` (to the centre) below.
+const remaining = computed(() =>
+    distance.value === null ? null : Math.max(0, distance.value - props.location.arrival_radius_m),
+);
 
 const hasHeading = computed(() => orientationSupported.value && heading.value !== null);
 
@@ -57,7 +64,7 @@ watch(orientation, (value) => {
 
     posture.value = nextPosture(posture.value, value.beta, value.gamma);
     cameraDirection.value = posture.value === 'upright'
-        ? smoothAngle(cameraDirection.value, cameraHeading(value.alpha, value.beta, value.gamma), SMOOTHING)
+        ? smoothAngle(cameraDirection.value, arCameraHeading(value), SMOOTHING)
         : null;
 });
 
@@ -80,7 +87,7 @@ const cameraOn = computed(() => cameraChoice.value !== 'declined');
 
 // Hot/cold background: one layer per heat level, crossfaded by opacity
 // (gradients themselves can't be CSS-transitioned).
-const heat = computed(() => heatLevel(distance.value));
+const heat = computed(() => heatLevel(remaining.value));
 const heatLayers = Array.from({ length: HEAT_LEVELS + 1 }, (_, level) => heatGradient(level));
 
 // Thermometer segments light up from cool to hot as heat rises.
@@ -204,7 +211,7 @@ onUnmounted(() => {
 
         <ErrorFlash :show="hasArrivalError" />
 
-        <ArAim v-if="aim" :aim="aim" :distance="distance" :arrival-progress="arrivalProgress" />
+        <ArAim v-if="aim" :aim="aim" :distance="remaining" :arrival-progress="arrivalProgress" />
 
         <div v-else class="relative flex h-full flex-col items-center justify-center gap-12 px-4 pb-24 pt-24">
             <!-- Dial with the arrow. -->
@@ -256,9 +263,9 @@ onUnmounted(() => {
                     ></span>
                 </div>
                 <p
-                    v-if="distance !== null"
+                    v-if="remaining !== null"
                     class="rounded-full bg-slate-900/60 px-3 py-0.5 text-lg font-bold tabular-nums text-white"
-                >{{ Math.round(distance) }} m</p>
+                >{{ Math.round(remaining) }} m</p>
             </div>
         </div>
     </div>

@@ -8,6 +8,7 @@ import {
     UPRIGHT_EXIT_DEG,
     absoluteOrientation,
     aimTarget,
+    arCameraHeading,
     arTargetSize,
     easeTowards,
     AR_TARGET_FAR,
@@ -183,7 +184,7 @@ describe('absoluteOrientation', () => {
 
     test('derives alpha from the iOS compass heading', () => {
         expect(absoluteOrientation({ absolute: false, alpha: 123, beta: 80, gamma: 5, webkitCompassHeading: 90 }))
-            .toEqual({ alpha: 270, beta: 80, gamma: 5 });
+            .toEqual({ alpha: 270, beta: 80, gamma: 5, compassHeading: 90 });
     });
 
     test('maps an iOS heading of 0 to alpha 0, not 360', () => {
@@ -248,5 +249,18 @@ describe('easeTowards', () => {
         const at30 = easeTowards(easeTowards(easeTowards(0, 1, 1000 / 30, 120), 1, 1000 / 30, 120), 1, 1000 / 30, 120);
 
         expect(at60).toBeCloseTo(at30);
+    });
+});
+
+describe('arCameraHeading', () => {
+    test('iOS: the compass heading as reported, whatever beta/gamma do near vertical', () => {
+        // gamma flipped by iOS as the phone passes vertical must not matter.
+        expect(arCameraHeading({ alpha: 270, beta: 91, gamma: -178, compassHeading: 90 })).toBe(90);
+        expect(arCameraHeading({ alpha: 270, beta: 89, gamma: 2, compassHeading: 90 })).toBe(90);
+    });
+
+    test('other browsers: the camera direction from the Euler angles', () => {
+        expect(arCameraHeading({ alpha: 0, beta: 90, gamma: 0 })).toBeCloseTo(0);
+        expect(arCameraHeading({ alpha: 270, beta: 90, gamma: 0 })).toBeCloseTo(90);
     });
 });
