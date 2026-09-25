@@ -119,7 +119,6 @@ const backToList = () => {
     state.value = listState();
 };
 
-
 // GameMap only reports { lat, lng }; keep the radius.
 const onMapDraft = (position) => {
     if (!state.value.draft) return;
@@ -134,8 +133,11 @@ watch(() => props.locations, (locations) => {
     state.value = reconcileWithLocations(state.value, locations);
 });
 
-// Every panel switch starts at the top (the panel scrolls independently of the map).
-watch(() => [state.value.panel, state.value.selectedId], async () => {
+// Every panel switch starts at the top (the panel scrolls independently of the
+// map). A string key, not an array: `state` is replaced on every radius or
+// marker change, and a fresh array would count as a switch and jump the form
+// to the top while the dozor drags the radius slider.
+watch(() => `${state.value.panel}:${state.value.selectedId}:${addFormCount.value}`, async () => {
     await nextTick();
     if (panelEl.value) panelEl.value.scrollTop = 0;
 });
