@@ -1,37 +1,28 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue';
+import { acquireCamera, pauseCamera } from '@/lib/cameraStream';
 
-// Live back-camera picture behind the AR aim. Emits 'unavailable' when
-// there is no camera or the player refuses it; the caller then keeps its
-// plain background.
+// Live back-camera picture behind the AR aim, from the game's one shared
+// stream (paused, not closed, when this view goes away — see
+// cameraStream.js). Emits 'unavailable' when there is no camera or the
+// player refuses it; the caller then keeps its plain background.
 const emit = defineEmits(['unavailable']);
 
 const video = ref(null);
-let stream = null;
-let stopped = false;
+let unmounted = false;
 
 onMounted(async () => {
-    if (!navigator.mediaDevices?.getUserMedia) {
-        emit('unavailable');
-
-        return;
-    }
-
     try {
-        const media = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: 'environment' } },
-            audio: false,
-        });
+        const stream = await acquireCamera();
 
         // Unmounted while the permission prompt was open.
-        if (stopped) {
-            media.getTracks().forEach((track) => track.stop());
+        if (unmounted) {
+            pauseCamera();
 
             return;
         }
 
-        stream = media;
-        video.value.srcObject = media;
+        video.value.srcObject = stream;
         await video.value.play().catch(() => {});
     } catch (error) {
         console.warn('Camera unavailable', error);
@@ -40,9 +31,9 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-    stopped = true;
-    stream?.getTracks().forEach((track) => track.stop());
-    stream = null;
+    unmounted = true;
+    if (video.value) video.value.srcObject = null;
+    pauseCamera();
 });
 </script>
 

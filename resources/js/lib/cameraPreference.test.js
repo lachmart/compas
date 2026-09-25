@@ -29,32 +29,17 @@ describe('cameraPreference', () => {
 });
 
 describe('requestCamera', () => {
-    const stream = () => {
-        const track = { stopped: false, stop() { this.stopped = true; } };
-
-        return { track, getTracks: () => [track] };
-    };
-
-    test('a granted camera is remembered and released right away', async () => {
+    test('a granted camera is remembered', async () => {
         const storage = memoryStorage();
-        const media = stream();
 
-        expect(await requestCamera({ getUserMedia: async () => media }, storage)).toBe('granted');
+        expect(await requestCamera(async () => ({}), storage)).toBe('granted');
         expect(cameraPreference(storage)).toBe('granted');
-        expect(media.track.stopped).toBe(true);
     });
 
-    test('a refused camera is remembered as declined', async () => {
+    test('a refused or missing camera is remembered as declined', async () => {
         const storage = memoryStorage();
 
-        expect(await requestCamera({ getUserMedia: async () => { throw new Error('NotAllowedError'); } }, storage)).toBe('blocked');
-        expect(cameraPreference(storage)).toBe('declined');
-    });
-
-    test('no camera API means unsupported', async () => {
-        const storage = memoryStorage();
-
-        expect(await requestCamera(undefined, storage)).toBe('unsupported');
+        expect(await requestCamera(async () => { throw new Error('NotAllowedError'); }, storage)).toBe('blocked');
         expect(cameraPreference(storage)).toBe('declined');
     });
 });

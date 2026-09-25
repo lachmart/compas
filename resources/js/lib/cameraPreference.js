@@ -1,3 +1,4 @@
+import { acquireCamera, pauseCamera } from '@/lib/cameraStream';
 import { readStorage, writeStorage } from '@/lib/safeStorage';
 
 // Whether the player chose to play with the camera (AR aim) when the join
@@ -17,19 +18,14 @@ export function setCameraPreference(value, storage = globalThis.localStorage) {
 }
 
 // Asks the browser for the camera (call it from a tap) and remembers the
-// answer. Resolves to 'granted', 'blocked' (the browser refused — also
-// without asking when the player refused earlier; only its site settings
-// can undo that) or 'unsupported'.
-export async function requestCamera(mediaDevices = globalThis.navigator?.mediaDevices, storage = globalThis.localStorage) {
-    if (!mediaDevices?.getUserMedia) {
-        setCameraPreference('declined', storage);
-
-        return 'unsupported';
-    }
-
+// answer. The stream stays open but paused for the AR view (see
+// cameraStream.js), so iOS doesn't ask again. Resolves to 'granted' or
+// 'blocked' (no camera, or the browser refused — also without asking when
+// the player refused earlier; only its site settings can undo that).
+export async function requestCamera(acquire = acquireCamera, storage = globalThis.localStorage) {
     try {
-        const stream = await mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
-        stream.getTracks().forEach((track) => track.stop());
+        await acquire();
+        pauseCamera();
         setCameraPreference('granted', storage);
 
         return 'granted';

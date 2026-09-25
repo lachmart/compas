@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import CompassScreen from '@/Components/Play/CompassScreen.vue';
 import MapScreen from '@/Components/Play/MapScreen.vue';
@@ -14,6 +14,7 @@ import HelpSheet from '@/Components/Play/HelpSheet.vue';
 import { helpSeen, markHelpSeen } from '@/lib/helpSeen';
 import RewardOverlay from '@/Components/Play/RewardOverlay.vue';
 import FinishScreen from '@/Components/Play/FinishScreen.vue';
+import { releaseCamera } from '@/lib/cameraStream';
 import { unlockAudio } from '@/lib/feedback';
 import { isPhotoTask } from '@/lib/taskTypes';
 import { usePositionPings } from '@/lib/usePositionPings';
@@ -63,6 +64,15 @@ onMounted(() => {
 });
 
 onUnmounted(stopUnlockListeners);
+
+// The shared camera stays open during the game (see cameraStream.js); leaving
+// the page or finishing the game really turns it off.
+onMounted(() => window.addEventListener('pagehide', releaseCamera));
+onUnmounted(() => {
+    window.removeEventListener('pagehide', releaseCamera);
+    releaseCamera();
+});
+watch(finished, (done) => done && releaseCamera());
 
 const currentLocation = computed(() => props.locations[currentIndex.value] ?? null);
 
