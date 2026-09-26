@@ -4,6 +4,7 @@ import { arrowRotationDegrees, bearingDegrees, distanceMeters } from '@/lib/geo'
 import { aimTarget, arCameraHeading, nextPosture, smoothAngle } from '@/lib/orientation';
 import { HEAT_LEVELS, heatGradient, heatLevel } from '@/lib/proximity';
 import { isSessionGone, reloadForGoneSession } from '@/lib/playSession';
+import { declinationAt, trueHeading } from '@/lib/declination';
 import { useCameraPreference } from '@/lib/useCameraPreference';
 import { useSensors } from '@/lib/useSensors';
 import ArAim from '@/Components/Play/ArAim.vue';
@@ -44,10 +45,15 @@ const bearing = computed(() => {
     return bearingDegrees(position.value.lat, position.value.lng, props.location.lat, props.location.lng);
 });
 
+// The phone's compass points to magnetic north, the bearing to true north:
+// add the local declination (~5–6° in Czechia) or every arrow and AR target
+// sits that far to the right.
+const declination = computed(() => (position.value ? declinationAt(position.value.lat, position.value.lng) : 0));
+
 const rotation = computed(() => {
     if (bearing.value === null || !hasHeading.value) return 0;
 
-    return arrowRotationDegrees(bearing.value, heading.value);
+    return arrowRotationDegrees(bearing.value, trueHeading(heading.value, declination.value));
 });
 
 // 'flat' shows the classic arrow; 'upright' (phone held like a camera)
@@ -76,7 +82,9 @@ const arMode = computed(() => posture.value === 'upright' && cameraDirection.val
 const aim = ref(null);
 
 watch([arMode, cameraDirection, bearing], () => {
-    aim.value = arMode.value ? aimTarget(bearing.value, cameraDirection.value, aim.value?.aligned ?? false) : null;
+    aim.value = arMode.value
+        ? aimTarget(bearing.value, trueHeading(cameraDirection.value, declination.value), aim.value?.aligned ?? false)
+        : null;
 });
 
 // A player who chose "without camera" (join screen or help) is never asked;
