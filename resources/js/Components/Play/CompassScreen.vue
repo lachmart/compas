@@ -2,7 +2,7 @@
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { arrowRotationDegrees, bearingDegrees, distanceMeters } from '@/lib/geo';
 import { aimTarget, arCameraHeading, nextPosture, smoothAngle } from '@/lib/orientation';
-import { HEAT_LEVELS, heatGradient, heatLevel } from '@/lib/proximity';
+import { HEAT_LEVELS, directionUnreliable, heatGradient, heatLevel } from '@/lib/proximity';
 import { isSessionGone, reloadForGoneSession } from '@/lib/playSession';
 import { declinationAt, trueHeading } from '@/lib/declination';
 import { useCameraPreference } from '@/lib/useCameraPreference';
@@ -11,6 +11,7 @@ import ArAim from '@/Components/Play/ArAim.vue';
 import ArrivalRing from '@/Components/Play/ArrivalRing.vue';
 import CameraFeed from '@/Components/Play/CameraFeed.vue';
 import CompassArrow from '@/Components/Play/CompassArrow.vue';
+import HereSign from '@/Components/Play/HereSign.vue';
 import ErrorFlash from '@/Components/Play/ErrorFlash.vue';
 
 const props = defineProps({
@@ -36,6 +37,10 @@ const distance = computed(() => {
 const remaining = computed(() =>
     distance.value === null ? null : Math.max(0, distance.value - props.location.arrival_radius_m),
 );
+
+// Right next to the station GPS noise makes the direction random: show
+// "you're here, look around" instead of an arrow (see directionUnreliable).
+const closeBy = computed(() => directionUnreliable(distance.value, position.value?.accuracy));
 
 const hasHeading = computed(() => orientationSupported.value && heading.value !== null);
 
@@ -219,7 +224,7 @@ onUnmounted(() => {
 
         <ErrorFlash :show="hasArrivalError" />
 
-        <ArAim v-if="aim" :aim="aim" :distance="remaining" :arrival-progress="arrivalProgress" />
+        <ArAim v-if="aim" :aim="aim" :close-by="closeBy" :distance="remaining" :arrival-progress="arrivalProgress" />
 
         <div v-else class="relative flex h-full flex-col items-center justify-center gap-12 px-4 pb-24 pt-24">
             <!-- Dial with the arrow. -->
@@ -228,7 +233,9 @@ onUnmounted(() => {
                     <ArrivalRing :progress="arrivalProgress" />
                 </div>
 
-                <CompassArrow v-if="hasHeading" :rotation="rotation" :dimmed="bearing === null" />
+                <HereSign v-if="closeBy" />
+
+                <CompassArrow v-else-if="hasHeading" :rotation="rotation" :dimmed="bearing === null" />
 
                 <!-- No heading yet. On iOS the compass must be switched on by a tap
                      (withdrawn after a denied tap: the static icon below stays). -->

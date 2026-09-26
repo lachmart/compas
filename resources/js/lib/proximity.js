@@ -14,6 +14,18 @@ export function heatLevel(distanceM) {
     return index === -1 ? HEAT_LEVELS : index;
 }
 
+// Right next to a station the GPS error (5–15 m on phones) is as big as the
+// distance itself: the player's fix jitters around the point and the
+// direction to it turns random, even backwards. Closer than this the arrow
+// is replaced by a "you're here, look around" sign.
+export const MIN_RELIABLE_DIRECTION_M = 8;
+
+export function directionUnreliable(distanceM, accuracyM) {
+    if (distanceM === null || distanceM === undefined) return false;
+
+    return distanceM < Math.max(MIN_RELIABLE_DIRECTION_M, 1.5 * (accuracyM ?? 0));
+}
+
 // Full class strings (never assembled) so Tailwind's scanner finds them.
 const GRADIENTS = [
     'bg-gradient-to-b from-blue-500 to-indigo-800',

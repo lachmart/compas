@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import ArrivalRing from '@/Components/Play/ArrivalRing.vue';
+import HereSign from '@/Components/Play/HereSign.vue';
 import { arTargetSize, easeTowards } from '@/lib/orientation';
 
 // AR overlay for the upright phone: a fixed reticle in the middle and the
@@ -9,6 +10,9 @@ const props = defineProps({
     // { offset, direction, aligned } from aimTarget().
     aim: { type: Object, required: true },
     distance: { type: Number, default: null },
+    // So close that the direction is GPS noise: no marker or turn arrows,
+    // just "you're here, look around" in the reticle.
+    closeBy: { type: Boolean, default: false },
     // 0..1 while the arrival countdown runs, else null.
     arrivalProgress: { type: Number, default: null },
 });
@@ -54,11 +58,14 @@ const targetSize = computed(() => `${arTargetSize(props.distance)}px`);
 
 const distanceLabel = computed(() => (props.distance === null ? null : `${Math.round(props.distance)} m`));
 
+// Aiming only means something while the direction is reliable.
+const aimed = computed(() => props.aim.aligned && !props.closeBy);
+
 // One short buzz the moment the player aims at the target; not repeated
 // while they stay on it. iOS ignores web vibration — the reticle still
 // turns green.
 watch(
-    () => props.aim.aligned,
+    () => aimed.value,
     (aligned, was) => {
         if (aligned && !was) navigator.vibrate?.(120);
     },
@@ -74,7 +81,7 @@ watch(
         <!-- Target marker at its real direction. Only the target itself is
              centred on the horizon; the distance hangs below it. -->
         <div
-            v-if="aim.offset !== null"
+            v-if="!closeBy && aim.offset !== null"
             ref="marker"
             class="absolute left-1/2 top-1/2 will-change-transform"
             style="transform: translate(-50%, -50%)"
@@ -82,7 +89,7 @@ watch(
             <svg
                 viewBox="0 0 48 48"
                 class="block drop-shadow-[0_2px_6px_rgba(15,23,42,0.6)] motion-safe:transition-all motion-safe:duration-500"
-                :class="{ 'scale-110': aim.aligned }"
+                :class="{ 'scale-110': aimed }"
                 :style="{ width: targetSize, height: targetSize }"
             >
                 <circle cx="24" cy="24" r="21" class="fill-white" />
@@ -103,9 +110,10 @@ watch(
             <div v-if="arrivalProgress !== null" class="absolute -inset-6">
                 <ArrivalRing :progress="arrivalProgress" />
             </div>
+            <HereSign v-if="closeBy" class="absolute inset-0" />
             <svg viewBox="0 0 100 100" class="h-full w-full drop-shadow-[0_1px_3px_rgba(15,23,42,0.7)]" fill="none" stroke-linecap="round">
-                <circle cx="50" cy="50" r="44" stroke-width="4" :class="aim.aligned ? 'stroke-green-400' : 'stroke-white'" />
-                <g stroke-width="5" :class="aim.aligned ? 'stroke-green-400' : 'stroke-white'">
+                <circle cx="50" cy="50" r="44" stroke-width="4" :class="aimed ? 'stroke-green-400' : 'stroke-white'" />
+                <g stroke-width="5" :class="aimed ? 'stroke-green-400' : 'stroke-white'">
                     <line x1="50" y1="0" x2="50" y2="16" />
                     <line x1="50" y1="84" x2="50" y2="100" />
                     <line x1="0" y1="50" x2="16" y2="50" />
@@ -116,7 +124,7 @@ watch(
 
         <!-- Target outside the picture: which way to turn. -->
         <div
-            v-if="aim.direction === 'left' || aim.direction === 'right'"
+            v-if="!closeBy && (aim.direction === 'left' || aim.direction === 'right')"
             class="absolute top-1/2 flex -translate-y-1/2 items-center"
             :class="aim.direction === 'left' ? 'left-3' : 'right-3'"
         >
@@ -128,7 +136,7 @@ watch(
         </div>
 
         <!-- Target behind the player: turn around. -->
-        <div v-else-if="aim.direction === 'behind'" class="absolute inset-x-0 top-[62%] flex justify-center">
+        <div v-else-if="!closeBy && aim.direction === 'behind'" class="absolute inset-x-0 top-[62%] flex justify-center">
             <span class="flex h-24 w-24 items-center justify-center rounded-full bg-orange-500 text-white shadow-xl ring-4 ring-white motion-safe:animate-pulse">
                 <svg viewBox="0 0 24 24" class="h-16 w-16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M9 14 4 9l5-5" />
@@ -138,7 +146,7 @@ watch(
         </div>
 
         <!-- Distance stays readable while the target is out of the picture. -->
-        <div v-if="aim.offset === null && distanceLabel" class="absolute inset-x-0 bottom-[max(6.5rem,calc(env(safe-area-inset-bottom)+5rem))] flex justify-center">
+        <div v-if="(closeBy || aim.offset === null) && distanceLabel" class="absolute inset-x-0 bottom-[max(6.5rem,calc(env(safe-area-inset-bottom)+5rem))] flex justify-center">
             <span class="rounded-full bg-slate-900/70 px-4 py-1 text-xl font-bold tabular-nums text-white">{{ distanceLabel }}</span>
         </div>
     </div>

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { HEAT_LEVELS, heatGradient, heatLevel, unwrapAngle } from './proximity';
+import { HEAT_LEVELS, MIN_RELIABLE_DIRECTION_M, directionUnreliable, heatGradient, heatLevel, unwrapAngle } from './proximity';
 
 describe('heatLevel', () => {
     test('no distance yet is the coldest level', () => {
@@ -79,5 +79,26 @@ describe('unwrapAngle', () => {
     test('accepts next angles outside 0..360', () => {
         expect(unwrapAngle(0, -20)).toBe(-20);
         expect(unwrapAngle(0, 380)).toBe(20);
+    });
+});
+
+describe('directionUnreliable', () => {
+    test('far away the direction holds', () => {
+        expect(directionUnreliable(60, 10)).toBe(false);
+    });
+
+    test('within 1.5x the GPS error the direction is noise', () => {
+        expect(directionUnreliable(14, 10)).toBe(true);
+        expect(directionUnreliable(16, 10)).toBe(false);
+    });
+
+    test('never trusted closer than the minimum, even with a precise fix', () => {
+        expect(directionUnreliable(MIN_RELIABLE_DIRECTION_M - 1, 2)).toBe(true);
+        expect(directionUnreliable(MIN_RELIABLE_DIRECTION_M + 1, 2)).toBe(false);
+    });
+
+    test('no distance yet or no accuracy reported', () => {
+        expect(directionUnreliable(null, 10)).toBe(false);
+        expect(directionUnreliable(20, undefined)).toBe(false);
     });
 });

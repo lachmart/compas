@@ -32,7 +32,7 @@ const turnCameraOff = () => {
 };
 
 const steps = computed(() => [
-    { icon: '\u{1F9ED}', title: 'Jdi za šipkou', text: 'Šipka ukazuje směr k dalšímu stanovišti. Drž telefon naplocho před sebou.' },
+    { icon: '\u{1F9ED}', title: 'Jdi za šipkou', text: 'Šipka ukazuje směr k dalšímu stanovišti. Drž telefon naplocho před sebou. Když jsi už blízko, šipku nahradí terč – rozhlédni se kolem sebe.' },
     { icon: '\u{1F321}\u{FE0F}', title: 'Přihořívá, hoří', text: 'Čím víc dílků teploměru svítí a čím teplejší je barva, tím jsi blíž. Číslo je vzdálenost v metrech.' },
     { icon: '\u{1F4F7}', title: 'Zaměř se kamerou', text: 'Když telefon zvedneš svisle, uvidíš cíl v obraze. Otoč se, aby byl terč uprostřed zaměřovače.' },
     { icon: '\u{23F3}', title: 'Na místě chvilku počkej', text: 'Až dojdeš, zůstaň chvíli stát, než se kruh kolem šipky celý vybarví.' },
