@@ -11,6 +11,18 @@ export const AVATARS = [
     { key: 'frog', emoji: '\u{1F438}', label: 'Žába' },
     { key: 'squirrel', emoji: '\u{1F43F}\u{FE0F}', label: 'Veverka' },
     { key: 'deer', emoji: '\u{1F98C}', label: 'Jelen' },
+    { key: 'wolf', emoji: '\u{1F43A}', label: 'Vlk' },
+    { key: 'boar', emoji: '\u{1F417}', label: 'Divočák' },
+    { key: 'badger', emoji: '\u{1F9A1}', label: 'Jezevec' },
+    { key: 'mouse', emoji: '\u{1F42D}', label: 'Myška' },
+    { key: 'bat', emoji: '\u{1F987}', label: 'Netopýr' },
+    { key: 'duck', emoji: '\u{1F986}', label: 'Kachna' },
+    { key: 'turtle', emoji: '\u{1F422}', label: 'Želva' },
+    { key: 'snail', emoji: '\u{1F40C}', label: 'Šnek' },
+    { key: 'ladybug', emoji: '\u{1F41E}', label: 'Beruška' },
+    { key: 'bee', emoji: '\u{1F41D}', label: 'Včelka' },
+    { key: 'butterfly', emoji: '\u{1F98B}', label: 'Motýl' },
+    { key: 'lion', emoji: '\u{1F981}', label: 'Lev' },
 ];
 
 const FALLBACK_EMOJI = '\u{1F642}';

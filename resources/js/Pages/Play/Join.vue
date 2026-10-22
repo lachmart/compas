@@ -164,9 +164,10 @@ const play = () => {
             class="relative flex w-full max-w-md flex-1 flex-col items-center justify-center gap-8 py-6"
             @submit.prevent="play"
         >
-            <!-- 4×2 animal picker -->
+            <!-- 5×4 animal picker: enough animals for a bigger group to tell
+                 each other apart on the tracking map. -->
             <div
-                class="grid w-full grid-cols-4 place-items-center gap-2 sm:gap-3"
+                class="grid w-full grid-cols-5 place-items-center gap-2 sm:gap-3"
                 :class="{ 'hint-shake': hint === 'shake' }"
                 role="radiogroup"
                 @animationend.self="hint = null"
@@ -179,7 +180,7 @@ const play = () => {
                     :aria-checked="form.avatar === animal.key"
                     :aria-disabled="isTaken(animal.key)"
                     :aria-label="animal.label"
-                    class="flex aspect-square w-full max-w-[88px] select-none items-center justify-center rounded-full bg-white shadow-lg shadow-teal-900/10 ring-1 ring-teal-900/5 transition duration-200 ease-out focus:outline-none focus-visible:ring-4 focus-visible:ring-teal-500 active:scale-95"
+                    class="flex aspect-square w-full max-w-[80px] select-none items-center justify-center rounded-full bg-white shadow-lg shadow-teal-900/10 ring-1 ring-teal-900/5 transition duration-200 ease-out focus:outline-none focus-visible:ring-4 focus-visible:ring-teal-500 active:scale-95"
                     :class="[
                         isTaken(animal.key)
                             ? 'cursor-not-allowed opacity-30 shadow-none grayscale active:scale-100'
@@ -196,7 +197,7 @@ const play = () => {
                 >
                     <span
                         :key="form.avatar === animal.key ? 'on' : 'off'"
-                        class="text-[clamp(2.25rem,11vw,3.5rem)] leading-none"
+                        class="text-[clamp(1.75rem,8.5vw,3rem)] leading-none"
                         :class="{ 'pop-in': form.avatar === animal.key }"
                         aria-hidden="true"
                     >{{ animal.emoji }}</span>

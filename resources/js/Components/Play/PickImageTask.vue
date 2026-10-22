@@ -8,6 +8,9 @@ const props = defineProps({
     images: { type: Array, required: true },
     gameSlug: { type: String, required: true },
     locationId: { type: Number, required: true },
+    // Checks a pick instead of the game server (the dozor's preview);
+    // resolves to { correct, player }.
+    submit: { type: Function, default: null },
 });
 const emit = defineEmits(['completed']);
 
@@ -46,16 +49,18 @@ const pick = async (index) => {
     wrong.value = null;
 
     try {
-        const response = await window.axios.post(
-            route('play.attempts.answer', [props.gameSlug, props.locationId]),
-            { selected_index: index },
-        );
+        const data = props.submit
+            ? await props.submit(index)
+            : (await window.axios.post(
+                route('play.attempts.answer', [props.gameSlug, props.locationId]),
+                { selected_index: index },
+            )).data;
 
-        if (response.data.correct) {
+        if (data.correct) {
             correct.value = index;
             // Short sound only: the reward overlay that follows celebrates.
             playSuccess();
-            completeTimer = setTimeout(() => emit('completed', response.data.player), CORRECT_MS);
+            completeTimer = setTimeout(() => emit('completed', data.player), CORRECT_MS);
         } else {
             showWrong(index);
         }

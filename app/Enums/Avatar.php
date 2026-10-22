@@ -12,6 +12,18 @@ enum Avatar: string
     case Frog = 'frog';
     case Squirrel = 'squirrel';
     case Deer = 'deer';
+    case Wolf = 'wolf';
+    case Boar = 'boar';
+    case Badger = 'badger';
+    case Mouse = 'mouse';
+    case Bat = 'bat';
+    case Duck = 'duck';
+    case Turtle = 'turtle';
+    case Snail = 'snail';
+    case Ladybug = 'ladybug';
+    case Bee = 'bee';
+    case Butterfly = 'butterfly';
+    case Lion = 'lion';
 
     public function label(): string
     {
@@ -24,6 +36,18 @@ enum Avatar: string
             self::Frog => 'Žába',
             self::Squirrel => 'Veverka',
             self::Deer => 'Jelen',
+            self::Wolf => 'Vlk',
+            self::Boar => 'Divočák',
+            self::Badger => 'Jezevec',
+            self::Mouse => 'Myška',
+            self::Bat => 'Netopýr',
+            self::Duck => 'Kachna',
+            self::Turtle => 'Želva',
+            self::Snail => 'Šnek',
+            self::Ladybug => 'Beruška',
+            self::Bee => 'Včelka',
+            self::Butterfly => 'Motýl',
+            self::Lion => 'Lev',
         };
     }
 }

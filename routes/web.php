@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\GameController;
 use App\Http\Controllers\Admin\LocationController;
+use App\Http\Controllers\Admin\StationPreviewController;
 use App\Http\Controllers\Admin\TrackingController;
 use App\Http\Controllers\Play\AttemptController;
 use App\Http\Controllers\Play\PlayController;
@@ -41,6 +42,8 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::scopeBindings()->group(function () {
         Route::put('games/{game}/locations/{location}', [LocationController::class, 'update'])->name('games.locations.update');
         Route::delete('games/{game}/locations/{location}', [LocationController::class, 'destroy'])->name('games.locations.destroy');
+        Route::get('games/{game}/locations/{location}/preview', [StationPreviewController::class, 'show'])->name('games.locations.preview');
+        Route::post('games/{game}/locations/{location}/preview/password', [StationPreviewController::class, 'password'])->name('games.locations.preview.password');
         Route::get('games/{game}/players/{playerSession}', [TrackingController::class, 'player'])->name('games.players.show');
         Route::get('games/{game}/players/{playerSession}/path', [TrackingController::class, 'path'])->name('games.players.path');
         Route::get('games/{game}/players/{playerSession}/attempts/{attempt}/photo', [TrackingController::class, 'photo'])->name('games.players.attempts.photo');

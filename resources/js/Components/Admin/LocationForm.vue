@@ -122,16 +122,34 @@ const inputClasses =
     <form class="flex min-h-full flex-col" @submit.prevent="submit">
         <div class="flex-1 space-y-6 p-5">
             <div>
-                <button
-                    type="button"
-                    class="-ml-1 inline-flex items-center gap-1 rounded-lg px-1 py-0.5 text-sm font-medium text-teal-700 hover:text-teal-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
-                    @click="emit('cancel')"
-                >
-                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fill-rule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
-                    </svg>
-                    Zpět na seznam
-                </button>
+                <div class="flex items-center justify-between gap-2">
+                    <button
+                        type="button"
+                        class="-ml-1 inline-flex items-center gap-1 rounded-lg px-1 py-0.5 text-sm font-medium text-teal-700 hover:text-teal-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                        @click="emit('cancel')"
+                    >
+                        <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
+                        </svg>
+                        Zpět na seznam
+                    </button>
+                    <!-- The saved station as the player sees it, in a new tab so
+                         the editor stays as it is. -->
+                    <a
+                        v-if="location"
+                        :href="route('admin.games.locations.preview', [game.id, location.id])"
+                        target="_blank"
+                        rel="noopener"
+                        :title="form.isDirty ? 'Náhled ukazuje uloženou verzi — nejdřív ulož změny.' : null"
+                        class="inline-flex items-center gap-1 rounded-lg px-1 py-0.5 text-sm font-medium text-teal-700 hover:text-teal-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                    >
+                        <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+                            <path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41ZM14 10a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" clip-rule="evenodd" />
+                        </svg>
+                        Náhled pro hráče
+                    </a>
+                </div>
                 <h2 class="mt-2 break-words text-lg font-bold text-slate-900">{{ heading }}</h2>
             </div>
 

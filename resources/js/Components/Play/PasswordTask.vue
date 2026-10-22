@@ -12,6 +12,9 @@ const props = defineProps({
     locationId: { type: Number, required: true },
     // The station's text board, which may hold the clue; null = none.
     info: { type: Object, default: null },
+    // Checks an answer instead of the game server (the dozor's preview);
+    // resolves to { correct, player }.
+    submit: { type: Function, default: null },
 });
 const emit = defineEmits(['completed']);
 
@@ -48,16 +51,18 @@ const submit = async () => {
     hasError.value = false;
 
     try {
-        const response = await window.axios.post(
-            route('play.attempts.password', [props.gameSlug, props.locationId]),
-            { answer: answer.value },
-        );
+        const data = props.submit
+            ? await props.submit(answer.value)
+            : (await window.axios.post(
+                route('play.attempts.password', [props.gameSlug, props.locationId]),
+                { answer: answer.value },
+            )).data;
 
-        if (response.data.correct) {
+        if (data.correct) {
             correct.value = true;
             // Short sound only: the reward overlay that follows celebrates.
             playSuccess();
-            completeTimer = setTimeout(() => emit('completed', response.data.player), CORRECT_MS);
+            completeTimer = setTimeout(() => emit('completed', data.player), CORRECT_MS);
         } else {
             clearTimeout(wrongTimer);
             wrong.value = true;

@@ -9,6 +9,9 @@ const props = defineProps({
     taskType: { type: String, required: true },
     gameSlug: { type: String, required: true },
     locationId: { type: Number, required: true },
+    // Takes the photo instead of the game server (the dozor's preview);
+    // resolves to { player }.
+    submit: { type: Function, default: null },
 });
 const emit = defineEmits(['completed']);
 
@@ -48,15 +51,17 @@ const onCapture = async (event) => {
     formData.append('photo', file);
 
     try {
-        const response = await window.axios.post(
-            route('play.attempts.photo', [props.gameSlug, props.locationId]),
-            formData,
-        );
+        const data = props.submit
+            ? await props.submit(file)
+            : (await window.axios.post(
+                route('play.attempts.photo', [props.gameSlug, props.locationId]),
+                formData,
+            )).data;
 
         uploaded.value = true;
         // Short sound only: the reward overlay that follows celebrates.
         playSuccess();
-        doneTimer = setTimeout(() => emit('completed', response.data.player), DONE_MS);
+        doneTimer = setTimeout(() => emit('completed', data.player), DONE_MS);
     } catch (error) {
         if (isSessionGone(error)) {
             reloadForGoneSession();
