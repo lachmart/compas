@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { HEAT_LEVELS, MIN_RELIABLE_DIRECTION_M, directionUnreliable, heatGradient, heatLevel, unwrapAngle } from './proximity';
+import { HEAT_LEVELS, MAX_UNRELIABLE_DIRECTION_M, MIN_RELIABLE_DIRECTION_M, directionUnreliable, heatGradient, heatLevel, unwrapAngle } from './proximity';
 
 describe('heatLevel', () => {
     test('no distance yet is the coldest level', () => {
@@ -95,6 +95,11 @@ describe('directionUnreliable', () => {
     test('never trusted closer than the minimum, even with a precise fix', () => {
         expect(directionUnreliable(MIN_RELIABLE_DIRECTION_M - 1, 2)).toBe(true);
         expect(directionUnreliable(MIN_RELIABLE_DIRECTION_M + 1, 2)).toBe(false);
+    });
+
+    test('a poor fix never hides the arrow far from the station', () => {
+        expect(directionUnreliable(MAX_UNRELIABLE_DIRECTION_M + 1, 40)).toBe(false);
+        expect(directionUnreliable(MAX_UNRELIABLE_DIRECTION_M - 1, 40)).toBe(true);
     });
 
     test('no distance yet or no accuracy reported', () => {

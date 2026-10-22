@@ -19,11 +19,17 @@ export function heatLevel(distanceM) {
 // direction to it turns random, even backwards. Closer than this the arrow
 // is replaced by a "you're here, look around" sign.
 export const MIN_RELIABLE_DIRECTION_M = 8;
+// A poor fix (25-40 m in a forest or right after start) must not take the
+// arrow away tens of metres before the station: a rough direction still
+// beats a sign that says "here" where there is nothing yet.
+export const MAX_UNRELIABLE_DIRECTION_M = 15;
 
 export function directionUnreliable(distanceM, accuracyM) {
     if (distanceM === null || distanceM === undefined) return false;
 
-    return distanceM < Math.max(MIN_RELIABLE_DIRECTION_M, 1.5 * (accuracyM ?? 0));
+    const limit = Math.min(MAX_UNRELIABLE_DIRECTION_M, Math.max(MIN_RELIABLE_DIRECTION_M, 1.5 * (accuracyM ?? 0)));
+
+    return distanceM < limit;
 }
 
 // Full class strings (never assembled) so Tailwind's scanner finds them.
